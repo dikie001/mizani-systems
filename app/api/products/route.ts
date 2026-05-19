@@ -75,6 +75,28 @@ export async function POST(request: Request) {
   const workspaceId = session.user.workspaceId
 
   try {
+    const subscription = await prisma.subscription.findUnique({
+      where: { workspaceId },
+      include: { plan: true },
+    })
+    const planName = subscription?.plan?.name || "trial"
+    const productCount = await prisma.product.count({
+      where: { workspaceId },
+    })
+
+    if (planName === "trial" && productCount >= 200) {
+      return NextResponse.json(
+        { error: "Free Trial workspaces are limited to 200 SKUs. Please upgrade to create more." },
+        { status: 403 }
+      )
+    }
+    if (planName === "basic" && productCount >= 1000) {
+      return NextResponse.json(
+        { error: "Basic workspaces are limited to 1,000 SKUs. Please upgrade to Professional to create more." },
+        { status: 403 }
+      )
+    }
+
     const payload = normalizeProductPayload(await request.json())
 
     const product = await prisma.$transaction(async (tx) => {

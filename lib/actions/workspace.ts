@@ -110,6 +110,42 @@ export async function createWorkspace(data: {
   }
 
   const userId = user.id
+
+  // Check workspace limits based on plans of existing workspaces
+  const memberships = await prisma.workspaceMember.findMany({
+    where: { userId },
+    include: {
+      workspace: {
+        include: {
+          subscription: {
+            include: {
+              plan: true
+            }
+          }
+        }
+      }
+    }
+  })
+
+  const workspaceCount = memberships.length
+  let highestPlan = "trial"
+  for (const m of memberships) {
+    const planName = m.workspace.subscription?.plan?.name
+    if (planName === "pro") {
+      highestPlan = "pro"
+      break
+    } else if (planName === "basic") {
+      highestPlan = "basic"
+    }
+  }
+
+  if (highestPlan === "trial" && workspaceCount >= 1) {
+    throw new Error("Your Free Trial plan is limited to 1 workspace. Please upgrade to create more.")
+  }
+  if (highestPlan === "basic" && workspaceCount >= 3) {
+    throw new Error("Your Basic plan is limited to 3 workspaces. Please upgrade to Professional to create more.")
+  }
+
   const planToUse = data.planId || "trial"
   const staticPlan = getPlanById(planToUse)
 

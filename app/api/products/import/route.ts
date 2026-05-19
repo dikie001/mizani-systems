@@ -19,6 +19,44 @@ export async function POST(request: Request) {
     const body = await request.json()
     const items = parseProductImport(body)
 
+    const subscription = await prisma.subscription.findUnique({
+      where: { workspaceId },
+      include: { plan: true },
+    })
+    const planName = subscription?.plan?.name || "trial"
+    const currentProductCount = await prisma.product.count({
+      where: { workspaceId },
+    })
+
+    let newItemsCount = 0
+    for (const item of items) {
+      const existing = await prisma.product.findUnique({
+        where: {
+          workspaceId_sku: {
+            workspaceId,
+            sku: item.sku
+          }
+        }
+      })
+      if (!existing) {
+        newItemsCount++
+      }
+    }
+
+    if (planName === "trial" && currentProductCount + newItemsCount > 200) {
+      return NextResponse.json(
+        { error: `Import failed: Free Trial workspace is limited to 200 SKUs. Creating these would bring total to ${currentProductCount + newItemsCount}. Please upgrade.` },
+        { status: 403 }
+      )
+    }
+
+    if (planName === "basic" && currentProductCount + newItemsCount > 1000) {
+      return NextResponse.json(
+        { error: `Import failed: Basic workspace is limited to 1,000 SKUs. Creating these would bring total to ${currentProductCount + newItemsCount}. Please upgrade to Professional.` },
+        { status: 403 }
+      )
+    }
+
     const summary = {
       created: 0,
       updated: 0,
