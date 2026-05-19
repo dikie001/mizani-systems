@@ -198,6 +198,17 @@ export async function createWorkspace(data: {
         }
       })
 
+      await tx.notification.create({
+        data: {
+          workspaceId: newWorkspace.id,
+          type: "activity",
+          title: `Created workspace "${newWorkspace.name}"`,
+          description: "New workspace initialized.",
+          severity: "info",
+          status: "unread",
+        },
+      })
+
       return newWorkspace
     })
 

@@ -1,6 +1,7 @@
 "use client"
 
 import { startTransition, useEffect, useState } from "react"
+import useSWR from "swr"
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -20,6 +21,7 @@ import {
 } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { NotificationModal } from "@/components/notification-modal"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -34,6 +36,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 const routeLabels: Record<string, string> = {
   alerts: "Stock Alerts",
@@ -80,7 +84,9 @@ export function DashboardHeader() {
   const pathname = usePathname()
   const { theme, setTheme } = useTheme()
   const { data: session, status } = useSession()
+  const { data: alertCounts } = useSWR("/api/alerts/counts", fetcher)
   const [isAvatarReady, setIsAvatarReady] = useState(false)
+  const [isAlertsOpen, setIsAlertsOpen] = useState(false)
 
   const userName = session?.user?.name ?? ""
   const userEmail = session?.user?.email ?? ""
@@ -193,11 +199,18 @@ export function DashboardHeader() {
           />
         </div>
 
-        <Button variant="ghost" size="icon" className="relative rounded-full">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative rounded-full"
+          onClick={() => setIsAlertsOpen(true)}
+        >
           <Bell className="h-4 w-4" />
-          <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white">
-            3
-          </span>
+          {alertCounts && alertCounts.activeAlerts > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white">
+              {alertCounts.activeAlerts}
+            </span>
+          )}
         </Button>
 
         <DropdownMenu>
@@ -313,6 +326,7 @@ export function DashboardHeader() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <NotificationModal open={isAlertsOpen} onOpenChange={setIsAlertsOpen} />
       </div>
     </header>
   )

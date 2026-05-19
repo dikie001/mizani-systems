@@ -20,14 +20,14 @@ export function StatCard({
 }: StatCardProps) {
   return (
     <Card className="border-border bg-card shadow-sm">
-      <CardContent className="p-4">
+      <CardContent className="">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             <p className="truncate text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
               {title}
             </p>
 
-            <div className={`mt-1 text-2xl leading-none font-bold ${valColor}`}>
+            <div className={`mt-2 mb-2 text-2xl leading-none font-bold ${valColor}`}>
               {value}
             </div>
 

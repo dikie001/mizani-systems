@@ -4,14 +4,16 @@ import { auth } from "@/auth"
 
 export async function GET() {
   const session = await auth()
-  if (!session) {
+  if (!session?.user?.workspaceId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
+  const workspaceId = session.user.workspaceId
+
   try {
     const [activeAlerts, pendingOrders] = await Promise.all([
-      prisma.alert.count({ where: { status: "active" } }),
-      prisma.order.count({ where: { status: "pending" } })
+      prisma.alert.count({ where: { workspaceId, status: "active" } }),
+      prisma.order.count({ where: { workspaceId, status: "pending" } }),
     ])
 
     return NextResponse.json({

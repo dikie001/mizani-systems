@@ -381,7 +381,6 @@ function InventoryPageContent() {
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
 
-  const [notice, setNotice] = useState<NoticeState>(null)
   const [formMode, setFormMode] = useState<"create" | "edit">("create")
   const [formOpen, setFormOpen] = useState(false)
   const [formValues, setFormValues] =
@@ -629,7 +628,6 @@ function InventoryPageContent() {
   const [importFile, setImportFile] = useState<File | null>(null)
 
   const beginCreate = useCallback(() => {
-    setNotice(null)
     setFormMode("create")
     setEditingProductId(null)
     setFormValues(emptyProductForm())
@@ -688,7 +686,6 @@ function InventoryPageContent() {
     products?.filter((product) => product.status === "critical").length ?? 0
 
   const beginEdit = (product: InventoryProduct) => {
-    setNotice(null)
     setFormMode("edit")
     setEditingProductId(product.id)
     setFormValues(productToFormValues(product))
@@ -697,7 +694,6 @@ function InventoryPageContent() {
   }
 
   const beginAdjustment = (product: InventoryProduct) => {
-    setNotice(null)
     setAdjustmentValues({
       productId: product.id,
       productName: product.name,
@@ -708,7 +704,6 @@ function InventoryPageContent() {
   }
 
   const beginRecordSale = (product: InventoryProduct) => {
-    setNotice(null)
     setSaleValues({
       productId: product.id,
       productName: product.name,
@@ -748,10 +743,7 @@ function InventoryPageContent() {
       setCategoryOpen(false)
     } catch (err) {
       console.error(err)
-      setNotice({
-        type: "error",
-        message: "Failed to save category to database.",
-      })
+      toast.error("Failed to save category to database.")
     } finally {
       setCategoryAdding(false)
     }
@@ -789,7 +781,6 @@ function InventoryPageContent() {
   const handleProductSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setSubmittingForm(true)
-    setNotice(null)
 
     try {
       const endpoint =
@@ -821,26 +812,22 @@ function InventoryPageContent() {
       setFormOpen(false)
       setEditingProductId(null)
       setFormValues(emptyProductForm())
-      setNotice({
-        type: "success",
-        message:
-          formMode === "create"
-            ? "Product created successfully."
-            : "Product updated successfully.",
-      })
+      toast.success(
+        formMode === "create"
+          ? "Product created successfully."
+          : "Product updated successfully."
+      )
       await refreshInventory()
       if (returnToDetailsProductId) {
         setDetailsProductId(returnToDetailsProductId)
         setReturnToDetailsProductId(null)
       }
     } catch (submitError) {
-      setNotice({
-        type: "error",
-        message:
-          submitError instanceof Error
-            ? submitError.message
-            : "Unable to save product.",
-      })
+      toast.error(
+        submitError instanceof Error
+          ? submitError.message
+          : "Unable to save product."
+      )
     } finally {
       setSubmittingForm(false)
     }
@@ -853,8 +840,6 @@ function InventoryPageContent() {
     if (!confirmed) {
       return
     }
-
-    setNotice(null)
 
     try {
       const response = await fetch(`/api/products/${product.id}`, {
@@ -874,25 +859,19 @@ function InventoryPageContent() {
         setDetailsProductId(null)
       }
 
-      setNotice({
-        type: "success",
-        message: `${product.name} was deleted.`,
-      })
+      toast.success(`${product.name} was deleted.`)
       await refreshInventory()
     } catch (deleteError) {
-      setNotice({
-        type: "error",
-        message:
-          deleteError instanceof Error
-            ? deleteError.message
-            : "Unable to delete product.",
-      })
+      toast.error(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Unable to delete product."
+      )
     }
   }
 
   const handleExport = async () => {
     setExporting(true)
-    setNotice(null)
 
     try {
       const response = await fetch(
@@ -918,18 +897,13 @@ function InventoryPageContent() {
       link.remove()
       window.URL.revokeObjectURL(downloadUrl)
 
-      setNotice({
-        type: "success",
-        message: "Inventory export is ready.",
-      })
+      toast.success("Inventory export is ready.")
     } catch (exportError) {
-      setNotice({
-        type: "error",
-        message:
-          exportError instanceof Error
-            ? exportError.message
-            : "Unable to export products.",
-      })
+      toast.error(
+        exportError instanceof Error
+          ? exportError.message
+          : "Unable to export products."
+      )
     } finally {
       setExporting(false)
     }
@@ -938,7 +912,6 @@ function InventoryPageContent() {
   const handleAdjustmentSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setSubmittingAdjustment(true)
-    setNotice(null)
 
     try {
       const response = await fetch("/api/stock-movements", {
@@ -964,23 +937,18 @@ function InventoryPageContent() {
 
       setAdjustmentOpen(false)
       setAdjustmentValues(emptyStockAdjustment())
-      setNotice({
-        type: "success",
-        message: "Stock adjusted successfully.",
-      })
+      toast.success("Stock adjusted successfully.")
       await refreshInventory()
       if (returnToDetailsProductId) {
         setDetailsProductId(returnToDetailsProductId)
         setReturnToDetailsProductId(null)
       }
     } catch (adjustmentError) {
-      setNotice({
-        type: "error",
-        message:
-          adjustmentError instanceof Error
-            ? adjustmentError.message
-            : "Unable to adjust stock.",
-      })
+      toast.error(
+        adjustmentError instanceof Error
+          ? adjustmentError.message
+          : "Unable to adjust stock."
+      )
     } finally {
       setSubmittingAdjustment(false)
     }
@@ -989,14 +957,10 @@ function InventoryPageContent() {
   const handleSaleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setSubmittingSale(true)
-    setNotice(null)
 
     const quantityToDeduct = Number(saleValues.quantity)
     if (quantityToDeduct <= 0 || quantityToDeduct > saleValues.currentStock) {
-      setNotice({
-        type: "error",
-        message: "Invalid quantity sold.",
-      })
+      toast.error("Invalid quantity sold.")
       setSubmittingSale(false)
       return
     }
@@ -1033,23 +997,18 @@ function InventoryPageContent() {
         reference: "Direct Sale",
         notes: "",
       })
-      setNotice({
-        type: "success",
-        message: `Recorded sale of ${quantityToDeduct} units successfully.`,
-      })
+      toast.success(`Recorded sale of ${quantityToDeduct} units successfully.`)
       await refreshInventory()
       if (returnToDetailsProductId) {
         setDetailsProductId(returnToDetailsProductId)
         setReturnToDetailsProductId(null)
       }
     } catch (saleError) {
-      setNotice({
-        type: "error",
-        message:
-          saleError instanceof Error
-            ? saleError.message
-            : "Unable to record sale.",
-      })
+      toast.error(
+        saleError instanceof Error
+          ? saleError.message
+          : "Unable to record sale."
+      )
     } finally {
       setSubmittingSale(false)
     }
@@ -1060,7 +1019,6 @@ function InventoryPageContent() {
     if (!importFile) return
 
     setImporting(true)
-    setNotice(null)
 
     try {
       const content = await importFile.text()
@@ -1077,13 +1035,10 @@ function InventoryPageContent() {
 
       setImportOpen(false)
       setImportFile(null)
-      setNotice({ type: "success", message: payload.message })
+      toast.success(payload.message)
       await refreshInventory()
     } catch (err) {
-      setNotice({
-        type: "error",
-        message: err instanceof Error ? err.message : "Import failed.",
-      })
+      toast.error(err instanceof Error ? err.message : "Import failed.")
     } finally {
       setImporting(false)
     }
@@ -1127,20 +1082,7 @@ function InventoryPageContent() {
         </div>
       </div>
 
-      {notice ? (
-        <div
-          className={`flex animate-in items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-medium shadow-sm duration-300 fade-in slide-in-from-top-2 ${
-            notice.type === "success"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-500/5 dark:text-emerald-400"
-              : "border-red-200 bg-red-50 text-red-700 dark:border-red-900/30 dark:bg-red-500/5 dark:text-red-400"
-          }`}
-        >
-          <div
-            className={`h-2 w-2 animate-pulse rounded-full ${notice.type === "success" ? "bg-emerald-500" : "bg-red-500"}`}
-          />
-          {notice.message}
-        </div>
-      ) : null}
+
 
       <div className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
         {[
@@ -1516,7 +1458,26 @@ function InventoryPageContent() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="product-sku">SKU / Item Code *</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="product-sku">SKU / Item Code *</Label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const prefix = (formValues.category || "GEN")
+                        .replace(/[^a-zA-Z]/g, "")
+                        .slice(0, 3)
+                        .toUpperCase() || "GEN";
+                      const digits = Math.floor(1000 + Math.random() * 9000);
+                      setFormValues((prev) => ({
+                        ...prev,
+                        sku: `${prefix}-${digits}`,
+                      }));
+                    }}
+                    className="text-[10px] font-semibold text-primary hover:underline"
+                  >
+                    Auto-Generate
+                  </button>
+                </div>
                 <Input
                   id="product-sku"
                   name="sku"

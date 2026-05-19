@@ -62,6 +62,7 @@ model Workspace {
   stockMovements StockMovement[]
   auditLogs      AuditLog[]
   alerts         Alert[]
+  notifications  Notification[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -160,6 +161,7 @@ model Product {
   orderItems     OrderItem[]
   stockMovements StockMovement[]
   alerts         Alert[]
+  notifications  Notification[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -179,6 +181,22 @@ model Alert {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  type        String    // "alert", "activity"
+  title       String
+  description String
+  severity    String    @default("info") // "info", "warning", "critical"
+  status      String    @default("unread") // "unread", "read", "dismissed"
+  productId   String?
+  product     Product?  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  alertId     String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 // -----------------------------------------

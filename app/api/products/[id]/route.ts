@@ -126,6 +126,28 @@ export async function PUT(request: Request, context: RouteContext) {
         })
       }
 
+      await tx.auditLog.create({
+        data: {
+          action: `Updated product "${updatedProduct.name}" (SKU: ${updatedProduct.sku})`,
+          entity: "Product",
+          type: "update",
+          userId: session.user.id,
+          workspaceId: existingProduct.workspaceId,
+        },
+      })
+
+      await tx.notification.create({
+        data: {
+          workspaceId: existingProduct.workspaceId,
+          type: "activity",
+          title: `Updated product "${updatedProduct.name}" (SKU: ${updatedProduct.sku})`,
+          description: "Catalog item updated.",
+          severity: "info",
+          status: "unread",
+          productId: id,
+        },
+      })
+
       return updatedProduct
     })
 
@@ -182,6 +204,27 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
       await tx.stockMovement.deleteMany({
         where: { productId: id },
+      })
+
+      await tx.auditLog.create({
+        data: {
+          action: `Deleted product "${product.name}" (SKU: ${product.sku})`,
+          entity: "Product",
+          type: "delete",
+          userId: session.user.id,
+          workspaceId: product.workspaceId,
+        },
+      })
+
+      await tx.notification.create({
+        data: {
+          workspaceId: product.workspaceId,
+          type: "activity",
+          title: `Deleted product "${product.name}" (SKU: ${product.sku})`,
+          description: "Catalog item removed.",
+          severity: "info",
+          status: "unread",
+        },
       })
 
       await tx.product.delete({
