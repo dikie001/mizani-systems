@@ -142,14 +142,23 @@ export default function BillingPage() {
 
   const handleUpgrade = async (planId: "basic" | "pro") => {
     setIsSubmitting(true)
+    const currentPlanName = subscription?.plan?.name || ""
+    const isTrial = currentPlanName === "trial" || currentPlanName === "free"
+    const isInactive = !subscription || subscription.status === "cancelled" || subscription.status === "expired"
+
+    let verb = "upgraded"
+    if (!isInactive && !isTrial && currentPlanName === "pro" && planId === "basic") {
+      verb = "downgraded"
+    }
+
     try {
       const res = await updateSubscriptionPlan(planId)
       if (res.success) {
-        toast.success(`Successfully switched to ${planId === "pro" ? "Professional" : "Basic"} plan!`)
+        toast.success(`Successfully ${verb} to ${planId === "pro" ? "Professional" : "Basic"} plan!`)
         setIsUpgradeOpen(false)
         await fetchBillingData()
       } else {
-        toast.error(res.error || "Failed to update subscription plan")
+        toast.error(res.error || `Failed to ${verb === "upgraded" ? "upgrade" : "downgrade"} subscription plan`)
       }
     } catch (err) {
       toast.error("An unexpected error occurred")
@@ -550,20 +559,33 @@ export default function BillingPage() {
                         </>
                       )}
                       
-                      <Button
-                        className="w-full mt-4"
-                        variant={isCurrent ? "outline" : plan.variant as any}
-                        disabled={isCurrent || isSubmitting}
-                        onClick={() => handleUpgrade(plan.id as "basic" | "pro")}
-                      >
-                        {isSubmitting ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : isCurrent ? (
-                          "Current Plan"
-                        ) : (
-                          `Upgrade to ${plan.displayName}`
-                        )}
-                      </Button>
+                      {(() => {
+                        let actionText = "Upgrade"
+                        if (!isInactive && !isTrial) {
+                          if (currentPlanName === "pro" && plan.id === "basic") {
+                            actionText = "Downgrade"
+                          } else if (currentPlanName === "basic" && plan.id === "pro") {
+                            actionText = "Upgrade"
+                          }
+                        }
+
+                        return (
+                          <Button
+                            className="w-full mt-4"
+                            variant={isCurrent ? "outline" : plan.variant as any}
+                            disabled={isCurrent || isSubmitting}
+                            onClick={() => handleUpgrade(plan.id as "basic" | "pro")}
+                          >
+                            {isSubmitting ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : isCurrent ? (
+                              "Current Plan"
+                            ) : (
+                              `${actionText} to ${plan.displayName}`
+                            )}
+                          </Button>
+                        )
+                      })()}
                     </CardContent>
                   </Card>
                 )
