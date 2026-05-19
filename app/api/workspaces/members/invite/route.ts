@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { auth } from "@/auth"
-import { countAdminSeats, getPlanEntitlements, getWorkspacePlanName } from "@/lib/plans"
+import {
+  countAdminSeats,
+  getPlanEntitlements,
+  getWorkspacePlanName,
+} from "@/lib/plans"
 
 export async function POST(req: Request) {
   const session = await auth()
@@ -25,18 +29,18 @@ export async function POST(req: Request) {
 
     // Check if user already exists
     let user = await prisma.user.findUnique({
-      where: { email }
+      where: { email },
     })
 
     // If user doesn't exist, create a placeholder user
-    // In a real app, you'd send an email invite. 
+    // In a real app, you'd send an email invite.
     // Here we'll just link them so they see the workspace when they sign up.
     if (!user) {
       user = await prisma.user.create({
         data: {
           email,
           status: "pending",
-        }
+        },
       })
     }
 
@@ -45,20 +49,20 @@ export async function POST(req: Request) {
       where: {
         workspaceId_userId: {
           workspaceId: session.user.workspaceId,
-          userId: user.id
-        }
-      }
+          userId: user.id,
+        },
+      },
     })
 
     if (existingMembership) {
-      return NextResponse.json({ error: "User is already a member of this workspace" }, { status: 400 })
+      return NextResponse.json(
+        { error: "User is already a member of this workspace" },
+        { status: 400 }
+      )
     }
 
     const normalizedRole = role === "ADMIN" ? "ADMIN" : "MEMBER"
-    if (
-      normalizedRole === "ADMIN" &&
-      entitlements.maxAdminUsers !== null
-    ) {
+    if (normalizedRole === "ADMIN" && entitlements.maxAdminUsers !== null) {
       const currentAdminSeats = countAdminSeats(
         await prisma.workspaceMember.findMany({
           where: { workspaceId: session.user.workspaceId },
@@ -85,12 +89,15 @@ export async function POST(req: Request) {
         workspaceId: session.user.workspaceId,
         userId: user.id,
         role: normalizedRole,
-      }
+      },
     })
 
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Failed to invite member:", error)
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    )
   }
 }

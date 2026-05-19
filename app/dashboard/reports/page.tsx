@@ -120,22 +120,26 @@ const pieColors = [
 export default function ReportsPage() {
   const [range, setRange] = useState("12m")
 
-  const { data: stats, error: statsError, isLoading: statsLoading } = useSWR(
-    `/api/dashboard/reports/stats?range=${range}`,
-    fetcher
-  )
-  const { data: revenueData, error: revenueError, isLoading: revLoading } = useSWR(
-    `/api/dashboard/revenue?range=${range}`,
-    fetcher
-  )
-  const { data: categoryData, error: categoryError, isLoading: catLoading } = useSWR(
-    `/api/dashboard/categories?range=${range}`,
-    fetcher
-  )
-  const { data: topProducts, error: topProductsError, isLoading: topLoading } = useSWR(
-    `/api/dashboard/reports/top-products?range=${range}`,
-    fetcher
-  )
+  const {
+    data: stats,
+    error: statsError,
+    isLoading: statsLoading,
+  } = useSWR(`/api/dashboard/reports/stats?range=${range}`, fetcher)
+  const {
+    data: revenueData,
+    error: revenueError,
+    isLoading: revLoading,
+  } = useSWR(`/api/dashboard/revenue?range=${range}`, fetcher)
+  const {
+    data: categoryData,
+    error: categoryError,
+    isLoading: catLoading,
+  } = useSWR(`/api/dashboard/categories?range=${range}`, fetcher)
+  const {
+    data: topProducts,
+    error: topProductsError,
+    isLoading: topLoading,
+  } = useSWR(`/api/dashboard/reports/top-products?range=${range}`, fetcher)
   const { data: workspace } = useSWR<WorkspaceSummary>(
     "/api/workspaces/current",
     fetcher
@@ -147,7 +151,10 @@ export default function ReportsPage() {
   ) as RevenueTrend[]
 
   // Dynamic formatting for Reports page YAxis ticks without repeating currency prefix
-  const maxTrendVal = Math.max(...trendData.map((item: any) => Number(item.revenue) || 0), 0)
+  const maxTrendVal = Math.max(
+    ...trendData.map((item: any) => Number(item.revenue) || 0),
+    0
+  )
   const formatTrendTick = (v: number) => {
     if (maxTrendVal >= 1000) {
       return `${(v / 1000).toFixed(v % 1000 === 0 ? 0 : 1)}k`
@@ -161,7 +168,10 @@ export default function ReportsPage() {
   const analyticsError =
     statsError || revenueError || categoryError || topProductsError
 
-  if (analyticsError instanceof Error && (analyticsError as { status?: number }).status === 403) {
+  if (
+    analyticsError instanceof Error &&
+    (analyticsError as { status?: number }).status === 403
+  ) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center p-6">
         <Card className="max-w-xl border-border/60 bg-card/80 shadow-lg backdrop-blur-sm">
@@ -174,7 +184,9 @@ export default function ReportsPage() {
                 Professional Plan Required
               </h2>
               <p className="text-sm text-muted-foreground">
-                Advanced analytics are available on the Professional plan. Upgrade to unlock revenue trends, category insights, and top-product reports.
+                Advanced analytics are available on the Professional plan.
+                Upgrade to unlock revenue trends, category insights, and
+                top-product reports.
               </p>
             </div>
             <a
@@ -308,17 +320,19 @@ export default function ReportsPage() {
         </CardHeader>
         <CardContent>
           {revLoading ? (
-            <div className="space-y-4 h-56 flex flex-col justify-end pb-2">
-              <div className="flex justify-between items-center w-full px-2">
+            <div className="flex h-56 flex-col justify-end space-y-4 pb-2">
+              <div className="flex w-full items-center justify-between px-2">
                 <Skeleton className="h-3 w-28 bg-muted/70" />
                 <Skeleton className="h-3 w-16 bg-muted/50" />
               </div>
-              <div className="flex items-end gap-3.5 h-36 w-full px-2">
+              <div className="flex h-36 w-full items-end gap-3.5 px-2">
                 {[...Array(8)].map((_, i) => (
                   <Skeleton
                     key={i}
-                    className="w-full rounded-t opacity-70 bg-muted/60"
-                    style={{ height: `${30 + (i % 3) * 20 + Math.sin(i) * 12}%` }}
+                    className="w-full rounded-t bg-muted/60 opacity-70"
+                    style={{
+                      height: `${30 + (i % 3) * 20 + Math.sin(i) * 12}%`,
+                    }}
                   />
                 ))}
               </div>
@@ -428,7 +442,7 @@ export default function ReportsPage() {
           </CardHeader>
           <CardContent>
             {topLoading ? (
-              <div className="space-y-4 h-52 justify-center flex flex-col px-2">
+              <div className="flex h-52 flex-col justify-center space-y-4 px-2">
                 {[...Array(4)].map((_, i) => (
                   <div key={i} className="space-y-2">
                     <div className="flex justify-between">
@@ -480,13 +494,13 @@ export default function ReportsPage() {
           <CardContent>
             {catLoading ? (
               <div className="flex h-52 items-center justify-center gap-6 px-4">
-                <Skeleton className="h-32 w-32 rounded-full border-8 border-muted/30 bg-transparent flex items-center justify-center shrink-0">
+                <Skeleton className="flex h-32 w-32 shrink-0 items-center justify-center rounded-full border-8 border-muted/30 bg-transparent">
                   <div className="h-16 w-16 rounded-full bg-background" />
                 </Skeleton>
                 <div className="max-w-35 flex-1 space-y-2.5">
                   {[...Array(3)].map((_, i) => (
                     <div key={i} className="flex items-center gap-2">
-                      <Skeleton className="h-2.5 w-2.5 rounded-full shrink-0 bg-muted/80" />
+                      <Skeleton className="h-2.5 w-2.5 shrink-0 rounded-full bg-muted/80" />
                       <Skeleton className="h-3.5 w-full bg-muted/60" />
                     </div>
                   ))}

@@ -137,7 +137,7 @@ export default function DashboardPage() {
 
   const lowStockItems = (lowStockData ?? []) as LowStockItem[]
   const recentActivity = (activityData ?? []) as ActivityItem[]
-  const categories = (categoryData ?? []) as CategoryStat[]
+  const categories = Array.isArray(categoryData) ? categoryData : []
   const revenue = Array.isArray(revenueData) ? revenueData : []
 
   // Dynamic formatting for Revenue YAxis ticks without repeating currency prefix
@@ -311,7 +311,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="flex-1">
             {revLoading ? (
-              <div className="space-y-4 h-[252px] flex flex-col justify-end pb-4">
+              <div className="h-63 flex flex-col justify-end space-y-4 pb-4">
                 <div className="flex justify-between items-center w-full px-2">
                   <Skeleton className="h-3.5 w-24" />
                   <Skeleton className="h-3.5 w-16" />
@@ -329,7 +329,7 @@ export default function DashboardPage() {
             ) : (
               <ChartContainer
                 config={revenueChartConfig}
-                className="aspect-auto h-[252px] w-full"
+                className="aspect-auto h-63 w-full"
               >
                 <AreaChart
                   data={revenue}
@@ -446,7 +446,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="flex-1">
             {catLoading ? (
-              <div className="space-y-4.5 h-[248px] justify-center flex flex-col px-2">
+              <div className="h-62 flex flex-col justify-center space-y-4.5 px-2">
                 {[...Array(4)].map((_, i) => (
                   <div key={i} className="space-y-2">
                     <div className="flex justify-between">
@@ -460,7 +460,7 @@ export default function DashboardPage() {
             ) : (
               <ChartContainer
                 config={categoryChartConfig}
-                className="aspect-auto h-[248px] w-full"
+                className="aspect-auto h-62 w-full"
               >
                 <BarChart
                   data={categories}

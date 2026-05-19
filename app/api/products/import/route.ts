@@ -36,9 +36,9 @@ export async function POST(request: Request) {
         where: {
           workspaceId_sku: {
             workspaceId,
-            sku: item.sku
-          }
-        }
+            sku: item.sku,
+          },
+        },
       })
       if (!existing) {
         newItemsCount++
@@ -49,8 +49,7 @@ export async function POST(request: Request) {
       entitlements.maxProducts !== null &&
       currentProductCount + newItemsCount > entitlements.maxProducts
     ) {
-      const limitLabel =
-        planName === "trial" ? "Free Trial" : "Basic"
+      const limitLabel = planName === "trial" ? "Free Trial" : "Basic"
       const upgradeLabel = planName === "trial" ? "Basic" : "Professional"
       return NextResponse.json(
         {
@@ -72,7 +71,7 @@ export async function POST(request: Request) {
             workspaceId_name: {
               workspaceId,
               name: item.category,
-            }
+            },
           },
           update: {},
           create: {
@@ -86,7 +85,7 @@ export async function POST(request: Request) {
             workspaceId_sku: {
               workspaceId,
               sku: item.sku,
-            }
+            },
           },
           include: productQueryInclude(),
         })

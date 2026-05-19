@@ -21,7 +21,7 @@ export const PLANS = [
     name: "basic",
     displayName: "Basic",
     badge: null,
-    monthlyPrice: 675, 
+    monthlyPrice: 675,
     description: "For small operations getting off spreadsheets.",
     features: [
       "Up to 1,000 SKUs",
@@ -39,7 +39,7 @@ export const PLANS = [
     name: "pro",
     displayName: "Professional",
     badge: "Most Popular",
-    monthlyPrice: 1250, 
+    monthlyPrice: 1250,
     description: "For growing teams that need the full platform.",
     features: [
       "Unlimited SKUs",
@@ -115,13 +115,17 @@ export function getPlanEntitlements(name?: string | null): PlanEntitlements {
   return PLAN_ENTITLEMENTS[resolvePlanName(name)]
 }
 
-export function getWorkspacePlanName(subscription?: {
-  plan?: { name?: string | null } | null
-} | null): PlanName {
+export function getWorkspacePlanName(
+  subscription?: {
+    plan?: { name?: string | null } | null
+  } | null
+): PlanName {
   return resolvePlanName(subscription?.plan?.name)
 }
 
-export function getHighestPlanName(planNames: Array<string | null | undefined>) {
+export function getHighestPlanName(
+  planNames: Array<string | null | undefined>
+) {
   if (planNames.includes("pro")) {
     return "pro" as const
   }
