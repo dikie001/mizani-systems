@@ -1,36 +1,35 @@
 "use client"
 
-import * as React from "react"
-import { useRouter } from "next/navigation"
-import { useSession } from "next-auth/react"
 import {
+  Building2,
   Check,
   ChevronsUpDown,
+  Loader2,
   PlusCircle,
   Settings,
-  Building2,
-  Loader2,
 } from "lucide-react"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
+import * as React from "react"
 
-import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
   Command,
-  CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
-  CommandSeparator,
+  CommandSeparator
 } from "@/components/ui/command"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { getWorkspaces, switchWorkspace } from "@/lib/actions/workspace"
-import { toast } from "sonner"
 import { useSidebar } from "@/components/ui/sidebar"
+import { getWorkspaces, switchWorkspace } from "@/lib/actions/workspace"
+import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 type Workspace = {
   id: string
