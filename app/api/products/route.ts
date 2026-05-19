@@ -42,7 +42,11 @@ export async function GET(request: Request) {
   }
 
   if (status && status !== "all") {
-    where.status = status
+    if (status === "low-stock") {
+      where.status = { in: ["low-stock", "critical"] }
+    } else {
+      where.status = status
+    }
   }
 
   try {
