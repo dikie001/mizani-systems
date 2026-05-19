@@ -441,7 +441,7 @@ export default function BillingPage() {
 
       {/* Upgrade / Change Plan Dialog */}
       <Dialog open={isUpgradeOpen} onOpenChange={setIsUpgradeOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">Select a Subscription Plan</DialogTitle>
             <DialogDescription>
@@ -449,32 +449,35 @@ export default function BillingPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-6 md:grid-cols-2 mt-4">
+          <div className="flex flex-col gap-4 mt-4">
             {PLANS.filter((p) => p.id === "basic" || p.id === "pro").map((plan) => {
               const isCurrent = subscription?.plan?.id === plan.id || subscription?.plan?.name === plan.id
               return (
-                <Card key={plan.id} className={`flex flex-col border-border/80 ${plan.highlight ? "ring-2 ring-primary bg-primary/5" : ""}`}>
-                  <CardHeader className="pb-4">
+                <Card key={plan.id} className={`flex flex-col border-border/80 transition-all ${plan.highlight ? "ring-2 ring-primary bg-primary/5" : ""} ${isCurrent ? "opacity-90" : ""}`}>
+                  <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg font-bold">{plan.displayName}</CardTitle>
-                      {plan.badge && (
-                        <Badge variant="default" className="text-[10px] uppercase font-bold tracking-wider">
-                          {plan.badge}
-                        </Badge>
-                      )}
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-base font-bold">{plan.displayName}</CardTitle>
+                        {plan.badge && (
+                          <Badge variant="default" className="text-[9px] uppercase font-bold tracking-wider py-0.5 px-1.5">
+                            {plan.badge}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-baseline">
+                        <span className="text-xl font-bold text-foreground">{formatKES(plan.monthlyPrice)}</span>
+                        <span className="text-muted-foreground text-[10px]">/mo</span>
+                      </div>
                     </div>
-                    <div className="text-muted-foreground text-xs mt-1 min-h-[32px]">{plan.description}</div>
-                    <div className="mt-4">
-                      <span className="text-2xl font-bold text-foreground">{formatKES(plan.monthlyPrice)}</span>
-                      <span className="text-muted-foreground text-xs">/month</span>
-                    </div>
+                    <div className="text-muted-foreground text-xs mt-1">{plan.description}</div>
                   </CardHeader>
-                  <CardContent className="flex-1 pb-6 space-y-4">
-                    <ul className="space-y-2 text-xs text-muted-foreground flex-1">
+                  <CardContent className="pb-4 pt-2">
+                    <div className="text-xs font-semibold text-foreground/80 mb-2">Features:</div>
+                    <ul className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
                       {plan.features.map((feature, idx) => (
-                        <li key={idx} className="flex items-center gap-2">
+                        <li key={idx} className="flex items-center gap-1.5">
                           <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />
-                          <span>{feature}</span>
+                          <span className="truncate">{feature}</span>
                         </li>
                       ))}
                     </ul>
@@ -502,7 +505,7 @@ export default function BillingPage() {
 
       {/* Cancel Subscription Dialog */}
       <Dialog open={isCancelOpen} onOpenChange={setIsCancelOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive font-bold">
               <AlertTriangle className="h-5 w-5" />
