@@ -9,10 +9,7 @@ export async function POST(request: NextRequest) {
     const session = await auth()
 
     if (!session || !session.user?.email) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     const { planId, workspaceId } = await request.json()
@@ -27,10 +24,7 @@ export async function POST(request: NextRequest) {
     // Look up plan from static config (planId is the plan name: trial/basic/pro)
     const staticPlan = getPlanById(planId)
     if (!staticPlan) {
-      return NextResponse.json(
-        { error: "Plan not found" },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: "Plan not found" }, { status: 404 })
     }
 
     // Get the workspace and current subscription/plan info
@@ -83,7 +77,9 @@ export async function POST(request: NextRequest) {
             status: "active",
             paymentStatus: "paid",
             currentBillingCycleStart: new Date(),
-            currentBillingCycleEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14-day trial
+            currentBillingCycleEnd: new Date(
+              Date.now() + 14 * 24 * 60 * 60 * 1000
+            ), // 14-day trial
           },
         })
       } else {
@@ -94,7 +90,9 @@ export async function POST(request: NextRequest) {
             status: "active",
             paymentStatus: "paid",
             currentBillingCycleStart: new Date(),
-            currentBillingCycleEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+            currentBillingCycleEnd: new Date(
+              Date.now() + 14 * 24 * 60 * 60 * 1000
+            ),
           },
         })
       }
@@ -141,9 +139,14 @@ export async function POST(request: NextRequest) {
 
     // Determine top-up amount if upgrading from an existing paid plan
     const currentMonthlyPrice =
-      workspace?.subscription?.plan?.monthlyPrice ?? workspace?.selectedPlan?.monthlyPrice ?? 0
+      workspace?.subscription?.plan?.monthlyPrice ??
+      workspace?.selectedPlan?.monthlyPrice ??
+      0
 
-    const topUpAmount = Math.max(0, staticPlan.monthlyPrice - currentMonthlyPrice)
+    const topUpAmount = Math.max(
+      0,
+      staticPlan.monthlyPrice - currentMonthlyPrice
+    )
 
     // If no top-up is required (downgrade or same price), apply plan immediately
     if (topUpAmount === 0) {
@@ -161,7 +164,9 @@ export async function POST(request: NextRequest) {
             status: "active",
             paymentStatus: "paid",
             currentBillingCycleStart: new Date(),
-            currentBillingCycleEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            currentBillingCycleEnd: new Date(
+              Date.now() + 30 * 24 * 60 * 60 * 1000
+            ),
             nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
             cancelledAt: null,
             cancelReason: null,
@@ -175,7 +180,9 @@ export async function POST(request: NextRequest) {
             status: "active",
             paymentStatus: "paid",
             currentBillingCycleStart: new Date(),
-            currentBillingCycleEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            currentBillingCycleEnd: new Date(
+              Date.now() + 30 * 24 * 60 * 60 * 1000
+            ),
             nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
           },
         })
@@ -250,6 +257,7 @@ export async function POST(request: NextRequest) {
       accessCode: paystackResponse.data?.access_code,
       reference,
       paymentId: payment.id,
+      topUpAmount,
     })
   } catch (error) {
     console.error("Payment initialization error:", error)

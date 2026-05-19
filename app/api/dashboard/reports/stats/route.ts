@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { auth } from "@/auth"
+import { getWorkspacePlanName, getPlanEntitlements } from "@/lib/plans"
 import { startOfDay, subDays, subMilliseconds, subMonths } from "date-fns"
 
 type RangeKey = "7d" | "30d" | "3m" | "12m"
