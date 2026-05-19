@@ -77,7 +77,7 @@ const secondaryNavItems = [
   {
     title: "Billing",
     icon: CreditCard,
-    href: "/dashboard/settings/billing",
+    href: "/dashboard/billing",
     badge: null,
   },
 ]
@@ -245,12 +245,12 @@ export function DashboardSidebar() {
             ) : (
               <SidebarMenuButton
                 asChild
-                isActive={isNavItemActive(pathname, "/dashboard/settings/billing")}
+                isActive={false}
                 tooltip={subscription?.plan?.displayName || "Free Trial"}
                 size="lg"
                 className="flex h-10 w-full items-center rounded-lg border border-sidebar-border/50 bg-sidebar-accent/25 px-3 text-sm font-medium text-sidebar-foreground/80 transition-all duration-200 hover:bg-sidebar-accent/50 data-[active=true]:border-transparent data-[active=true]:bg-primary data-[active=true]:text-primary-foreground data-[active=true]:shadow-sm group-data-[collapsible=icon]:size-11! group-data-[collapsible=icon]:justify-center! group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:rounded-2xl group-data-[collapsible=icon]:border-transparent group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:px-0!"
               >
-                <Link href="/dashboard/settings/billing" onClick={handleNavClick}>
+                <Link href="/dashboard/billing" onClick={handleNavClick}>
                   <CreditCard className="h-4 w-4 shrink-0 text-muted-foreground group-data-[active=true]/menu-button:text-primary-foreground group-data-[collapsible=icon]:m-0!" />
                   <span className="ml-2 truncate group-data-[collapsible=icon]:hidden">
                     {subscription?.plan?.displayName || "Free Trial"} Plan

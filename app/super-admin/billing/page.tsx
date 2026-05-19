@@ -493,7 +493,7 @@ export default function SuperAdminBillingPage() {
                             variant="outline"
                             className="border-border bg-background text-xs"
                           >
-                            <Link href="/dashboard/settings/billing">
+                            <Link href="/dashboard/billing">
                               <FileText className="mr-1.5 h-3.5 w-3.5" />
                               Open Billing Page
                             </Link>
