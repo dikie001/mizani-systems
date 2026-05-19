@@ -106,7 +106,11 @@ export default function OnboardingClient({
   const [hasPreselectedPlan] = useState(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search)
-      return !!(params.get("plan") || initialPlanName || sessionStorage.getItem("selectedPlan"))
+      return !!(
+        params.get("plan") ||
+        initialPlanName ||
+        sessionStorage.getItem("selectedPlan")
+      )
     }
     return !!initialPlanName
   })
@@ -293,7 +297,14 @@ export default function OnboardingClient({
         handleCreateWorkspace()
       }
     }
-  }, [canAdvance, currentStep, activeSteps.length, handleCreateWorkspace, handleConfirmPlan, initialWorkspaceId])
+  }, [
+    canAdvance,
+    currentStep,
+    activeSteps.length,
+    handleCreateWorkspace,
+    handleConfirmPlan,
+    initialWorkspaceId,
+  ])
 
   // Enter key support
   useEffect(() => {
@@ -537,17 +548,23 @@ export default function OnboardingClient({
                                 {plan.displayName}
                               </span>
                               {plan.badge && (
-                                <Badge className="bg-primary/20 text-primary border border-primary/30 font-bold px-1.5 py-0 text-[10px] select-none">
+                                <Badge className="border border-primary/30 bg-primary/20 px-1.5 py-0 text-[10px] font-bold text-primary select-none">
                                   {plan.badge}
                                 </Badge>
                               )}
                             </div>
                             <span className="text-sm font-extrabold text-white">
-                              {plan.monthlyPrice === 0 ? "Free" : formatKES(plan.monthlyPrice)}
-                              {plan.monthlyPrice > 0 && <span className="text-[10px] font-medium text-slate-400">/mo</span>}
+                              {plan.monthlyPrice === 0
+                                ? "Free"
+                                : formatKES(plan.monthlyPrice)}
+                              {plan.monthlyPrice > 0 && (
+                                <span className="text-[10px] font-medium text-slate-400">
+                                  /mo
+                                </span>
+                              )}
                             </span>
                           </div>
-                          
+
                           <p className="text-xs text-slate-400">
                             {plan.description}
                           </p>
@@ -559,7 +576,7 @@ export default function OnboardingClient({
                         </div>
 
                         <div
-                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-all mt-1 ${
+                          className={`mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-all ${
                             active
                               ? "border-primary bg-primary"
                               : "border-white/20"
@@ -578,16 +595,20 @@ export default function OnboardingClient({
               {/* Step: Confirm Plan & Pay */}
               {activeStep?.id === "confirm" && selectedPlan && (
                 <div className="space-y-4">
-                  <div className="border border-white/10 rounded-xl p-4 bg-white/5 space-y-3 relative overflow-hidden">
+                  <div className="relative space-y-3 overflow-hidden rounded-xl border border-white/10 bg-white/5 p-4">
                     <div className="absolute top-0 right-0 p-3">
-                      <Badge className="bg-primary/20 border border-primary/30 text-primary font-bold px-2 py-0.5 text-[10px]">
+                      <Badge className="border border-primary/30 bg-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary">
                         Selected Plan
                       </Badge>
                     </div>
 
                     <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Plan Summary</span>
-                      <h3 className="text-base font-bold text-white">{selectedPlan.displayName} Plan</h3>
+                      <span className="text-[10px] font-bold tracking-wider text-primary uppercase">
+                        Plan Summary
+                      </span>
+                      <h3 className="text-base font-bold text-white">
+                        {selectedPlan.displayName} Plan
+                      </h3>
                     </div>
 
                     <div className="flex items-baseline gap-1">
@@ -597,17 +618,24 @@ export default function OnboardingClient({
                       <span className="text-xs text-slate-400">/month</span>
                     </div>
 
-                    <p className="text-xs text-slate-400 leading-normal">
+                    <p className="text-xs leading-normal text-slate-400">
                       {selectedPlan.description}
                     </p>
 
-                    <div className="pt-3 border-t border-white/5 space-y-2">
-                      <h4 className="text-[9px] font-bold uppercase tracking-wider text-slate-500">Key Features Included:</h4>
+                    <div className="space-y-2 border-t border-white/5 pt-3">
+                      <h4 className="text-[9px] font-bold tracking-wider text-slate-500 uppercase">
+                        Key Features Included:
+                      </h4>
                       <div className="grid grid-cols-2 gap-2">
                         {selectedPlan.features.slice(0, 4).map((feature) => (
-                          <div key={feature} className="flex items-center gap-1.5 text-[11px]">
-                            <Check className="h-3 w-3 text-primary shrink-0 bg-primary/10 p-0.5 rounded-full" />
-                            <span className="text-slate-300 truncate">{feature}</span>
+                          <div
+                            key={feature}
+                            className="flex items-center gap-1.5 text-[11px]"
+                          >
+                            <Check className="h-3 w-3 shrink-0 rounded-full bg-primary/10 p-0.5 text-primary" />
+                            <span className="truncate text-slate-300">
+                              {feature}
+                            </span>
                           </div>
                         ))}
                       </div>
@@ -616,7 +644,8 @@ export default function OnboardingClient({
 
                   <div className="text-center">
                     <p className="text-[10px] text-slate-500">
-                      You will be securely redirected to Paystack to complete your checkout.
+                      You will be securely redirected to Paystack to complete
+                      your checkout.
                     </p>
                   </div>
                 </div>
