@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { toast } from "sonner"
-import { Calendar, Send, Sparkles, Building, Phone, Mail, User, Loader2 } from "lucide-react"
+import { Loader2 } from "lucide-react"
 
 import {
   Dialog,
@@ -34,7 +34,7 @@ export function BookDemoModal({ isOpen, onClose }: ModalProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.name.trim() || !formData.email.trim()) {
-      toast.error("Please fill in your name and email.")
+      toast.error("Please fill in all required fields.")
       return
     }
 
@@ -65,138 +65,91 @@ export function BookDemoModal({ isOpen, onClose }: ModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md border border-border/80 bg-background/95 backdrop-blur-xl shadow-2xl p-6 rounded-2xl overflow-hidden">
-        {/* Subtle decorative glow in top-right */}
-        <div className="absolute -top-16 -right-16 w-32 h-32 bg-primary/10 rounded-full blur-2xl pointer-events-none" />
-        
-        <DialogHeader className="space-y-2.5 relative z-10">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-primary/20 bg-primary/5 shadow-md shadow-primary/5 text-primary mb-1">
-            <Sparkles className="h-5 w-5 animate-pulse" />
-          </div>
-          <DialogTitle className="text-xl font-bold tracking-tight text-foreground flex items-center gap-1.5">
-            Book an Online Demo
-          </DialogTitle>
-          <DialogDescription className="text-muted-foreground text-sm">
-            Experience how StockVault can streamline your catalog, automate orders, and cut down inventory overhead in a 1-on-1 demo.
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Book an Online Demo</DialogTitle>
+          <DialogDescription>
+            Experience how Mizani Systems can streamline your catalog, automate orders, and cut down inventory overhead in a 1-on-1 demo.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4 relative z-10">
-          <div className="space-y-1.5">
-            <Label htmlFor="demo-name" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Full Name <span className="text-primary">*</span>
-            </Label>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
-              <Input
-                id="demo-name"
-                type="text"
-                placeholder="John Doe"
-                className="pl-9 h-10 border-border/80 bg-muted/20"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                disabled={loading}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="demo-email" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Business Email <span className="text-primary">*</span>
-            </Label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
-              <Input
-                id="demo-email"
-                type="email"
-                placeholder="john@company.com"
-                className="pl-9 h-10 border-border/80 bg-muted/20"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                disabled={loading}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="demo-company" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Company
-              </Label>
-              <div className="relative">
-                <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
-                <Input
-                  id="demo-company"
-                  type="text"
-                  placeholder="Acme Corp"
-                  className="pl-9 h-10 border-border/80 bg-muted/20"
-                  value={formData.company}
-                  onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                  disabled={loading}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="demo-phone" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Phone Number
-              </Label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
-                <Input
-                  id="demo-phone"
-                  type="tel"
-                  placeholder="+254 712..."
-                  className="pl-9 h-10 border-border/80 bg-muted/20"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  disabled={loading}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="demo-message" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Preferred Date or Special Requests (Optional)
-            </Label>
-            <Textarea
-              id="demo-message"
-              placeholder="e.g. Next Tuesday afternoon, interested in multi-warehouse sync..."
-              className="min-h-[80px] border-border/80 bg-muted/20"
-              value={formData.message}
-              onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+        <form onSubmit={handleSubmit} className="space-y-6 pt-4">
+          <div className="space-y-2">
+            <Label htmlFor="demo-name">Full Name *</Label>
+            <Input
+              id="demo-name"
+              type="text"
+              placeholder="e.g. Jane Doe"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               disabled={loading}
+              required
             />
           </div>
 
-          <div className="pt-2 flex justify-end gap-3">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={onClose}
-              className="h-10 border-border text-foreground hover:bg-muted"
+          <div className="space-y-2">
+            <Label htmlFor="demo-email">Business Email *</Label>
+            <Input
+              id="demo-email"
+              type="email"
+              placeholder="e.g. jane@company.com"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               disabled={loading}
-            >
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="demo-company">Company</Label>
+              <Input
+                id="demo-company"
+                type="text"
+                placeholder="e.g. Acme Corp"
+                value={formData.company}
+                onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                disabled={loading}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="demo-phone">Phone Number</Label>
+              <Input
+                id="demo-phone"
+                type="tel"
+                placeholder="e.g. +254 700 123456"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                disabled={loading}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="demo-message">Preferred Date / Additional Notes</Label>
+            <Textarea
+              id="demo-message"
+              placeholder="Tell us about your business goals, preferred demo times, or specific features you'd like to see."
+              value={formData.message}
+              onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+              disabled={loading}
+              className="min-h-[100px]"
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
               Cancel
             </Button>
-            <Button
-              type="submit"
-              className="h-10 bg-primary text-primary-foreground font-semibold hover:bg-primary/95 flex items-center justify-center gap-2 shadow-lg shadow-primary/10 px-5"
-              disabled={loading}
-            >
+            <Button type="submit" disabled={loading || !formData.name || !formData.email}>
               {loading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Scheduling...
                 </>
               ) : (
-                <>
-                  <Calendar className="h-4 w-4" />
-                  Schedule Demo
-                </>
+                "Schedule Demo"
               )}
             </Button>
           </div>
@@ -219,7 +172,7 @@ export function ContactSalesModal({ isOpen, onClose }: ModalProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.name.trim() || !formData.email.trim() || !formData.message.trim()) {
-      toast.error("Please fill in your name, email, and message.")
+      toast.error("Please fill in all required fields.")
       return
     }
 
@@ -250,139 +203,92 @@ export function ContactSalesModal({ isOpen, onClose }: ModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md border border-border/80 bg-background/95 backdrop-blur-xl shadow-2xl p-6 rounded-2xl overflow-hidden">
-        {/* Subtle decorative glow in top-right */}
-        <div className="absolute -top-16 -right-16 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
-
-        <DialogHeader className="space-y-2.5 relative z-10">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-indigo-500/20 bg-indigo-500/5 shadow-md shadow-indigo-500/5 text-indigo-500 mb-1">
-            <Send className="h-5 w-5 animate-pulse" />
-          </div>
-          <DialogTitle className="text-xl font-bold tracking-tight text-foreground flex items-center gap-1.5">
-            Contact Enterprise Sales
-          </DialogTitle>
-          <DialogDescription className="text-muted-foreground text-sm">
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Contact Enterprise Sales</DialogTitle>
+          <DialogDescription>
             Discuss custom pricing contracts, SLA agreements, high-volume limits, or dedicated deployment configurations.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4 relative z-10">
-          <div className="space-y-1.5">
-            <Label htmlFor="sales-name" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Full Name <span className="text-indigo-500">*</span>
-            </Label>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
-              <Input
-                id="sales-name"
-                type="text"
-                placeholder="John Doe"
-                className="pl-9 h-10 border-border/80 bg-muted/20"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                disabled={loading}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="sales-email" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Work Email <span className="text-indigo-500">*</span>
-            </Label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
-              <Input
-                id="sales-email"
-                type="email"
-                placeholder="john@company.com"
-                className="pl-9 h-10 border-border/80 bg-muted/20"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                disabled={loading}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="sales-company" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Company Name
-              </Label>
-              <div className="relative">
-                <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
-                <Input
-                  id="sales-company"
-                  type="text"
-                  placeholder="Acme Corp"
-                  className="pl-9 h-10 border-border/80 bg-muted/20"
-                  value={formData.company}
-                  onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                  disabled={loading}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="sales-phone" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Phone Number
-              </Label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
-                <Input
-                  id="sales-phone"
-                  type="tel"
-                  placeholder="+254 712..."
-                  className="pl-9 h-10 border-border/80 bg-muted/20"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  disabled={loading}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="sales-message" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              What are your enterprise needs? <span className="text-indigo-500">*</span>
-            </Label>
-            <Textarea
-              id="sales-message"
-              placeholder="Tell us about your estimated SKU count, monthly order volume, or integrations required..."
-              className="min-h-[90px] border-border/80 bg-muted/20"
-              value={formData.message}
-              onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+        <form onSubmit={handleSubmit} className="space-y-6 pt-4">
+          <div className="space-y-2">
+            <Label htmlFor="sales-name">Full Name *</Label>
+            <Input
+              id="sales-name"
+              type="text"
+              placeholder="e.g. Jane Doe"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               disabled={loading}
               required
             />
           </div>
 
-          <div className="pt-2 flex justify-end gap-3">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={onClose}
-              className="h-10 border-border text-foreground hover:bg-muted"
+          <div className="space-y-2">
+            <Label htmlFor="sales-email">Work Email *</Label>
+            <Input
+              id="sales-email"
+              type="email"
+              placeholder="e.g. jane@company.com"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               disabled={loading}
-            >
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="sales-company">Company</Label>
+              <Input
+                id="sales-company"
+                type="text"
+                placeholder="e.g. Acme Corp"
+                value={formData.company}
+                onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                disabled={loading}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="sales-phone">Phone Number</Label>
+              <Input
+                id="sales-phone"
+                type="tel"
+                placeholder="e.g. +254 700 123456"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                disabled={loading}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="sales-message">What are your enterprise needs? *</Label>
+            <Textarea
+              id="sales-message"
+              placeholder="Tell us about your estimated SKU count, monthly order volume, or integrations required..."
+              value={formData.message}
+              onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+              disabled={loading}
+              className="min-h-[100px]"
+              required
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
               Cancel
             </Button>
-            <Button
-              type="submit"
-              className="h-10 bg-indigo-600 text-white font-semibold hover:bg-indigo-700 flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/10 px-5"
-              disabled={loading}
-            >
+            <Button type="submit" disabled={loading || !formData.name || !formData.email || !formData.message}>
               {loading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Sending...
                 </>
               ) : (
-                <>
-                  <Send className="h-4 w-4" />
-                  Submit Request
-                </>
+                "Submit Request"
               )}
             </Button>
           </div>
