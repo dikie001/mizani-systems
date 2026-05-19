@@ -36,7 +36,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { updateSubscriptionPlan, cancelSubscription } from "@/lib/actions/subscription"
+import {
+  updateSubscriptionPlan,
+  cancelSubscription,
+} from "@/lib/actions/subscription"
 import { mutate } from "swr"
 
 interface Subscription {
@@ -126,9 +129,14 @@ export default function BillingPage() {
     if (isUpgradeOpen) {
       const currentPlanName = subscription?.plan?.name || ""
       const isTrial = currentPlanName === "trial" || currentPlanName === "free"
-      const isInactive = !subscription || subscription.status === "cancelled" || subscription.status === "expired"
+      const isInactive =
+        !subscription ||
+        subscription.status === "cancelled" ||
+        subscription.status === "expired"
 
-      const plans = PLANS.filter((p) => p.id === "basic" || p.id === "pro").filter((plan) => {
+      const plans = PLANS.filter(
+        (p) => p.id === "basic" || p.id === "pro"
+      ).filter((plan) => {
         if (isInactive || isTrial) {
           return true
         }
@@ -145,23 +153,36 @@ export default function BillingPage() {
     setIsSubmitting(true)
     const currentPlanName = subscription?.plan?.name || ""
     const isTrial = currentPlanName === "trial" || currentPlanName === "free"
-    const isInactive = !subscription || subscription.status === "cancelled" || subscription.status === "expired"
+    const isInactive =
+      !subscription ||
+      subscription.status === "cancelled" ||
+      subscription.status === "expired"
 
     let verb = "upgraded"
-    if (!isInactive && !isTrial && currentPlanName === "pro" && planId === "basic") {
+    if (
+      !isInactive &&
+      !isTrial &&
+      currentPlanName === "pro" &&
+      planId === "basic"
+    ) {
       verb = "downgraded"
     }
 
     try {
       const res = await updateSubscriptionPlan(planId)
       if (res.success) {
-        toast.success(`Successfully ${verb} to ${planId === "pro" ? "Professional" : "Basic"} plan!`)
+        toast.success(
+          `Successfully ${verb} to ${planId === "pro" ? "Professional" : "Basic"} plan!`
+        )
         setIsUpgradeOpen(false)
         // Refresh local billing data and notify other UI (sidebar) to revalidate
         await fetchBillingData()
         mutate("/api/subscriptions/current")
       } else {
-        toast.error(res.error || `Failed to ${verb === "upgraded" ? "upgrade" : "downgrade"} subscription plan`)
+        toast.error(
+          res.error ||
+            `Failed to ${verb === "upgraded" ? "upgrade" : "downgrade"} subscription plan`
+        )
       }
     } catch (err) {
       toast.error("An unexpected error occurred")
@@ -314,7 +335,8 @@ export default function BillingPage() {
               >
                 Upgrade / Change Plan
               </Button>
-              {(subscription.status === "active" || subscription.status === "trial") && (
+              {(subscription.status === "active" ||
+                subscription.status === "trial") && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -329,11 +351,13 @@ export default function BillingPage() {
         </Card>
       ) : (
         <Card className="border-yellow-500/20 bg-yellow-500/5">
-          <CardContent className="pt-6 flex items-center gap-3">
-            <AlertTriangle className="h-5 w-5 text-yellow-600 shrink-0" />
+          <CardContent className="flex items-center gap-3 pt-6">
+            <AlertTriangle className="h-5 w-5 shrink-0 text-yellow-600" />
             <div>
-              <p className="font-medium text-yellow-600">No Active Subscription</p>
-              <p className="text-sm text-yellow-600/80 mt-1">
+              <p className="font-medium text-yellow-600">
+                No Active Subscription
+              </p>
+              <p className="mt-1 text-sm text-yellow-600/80">
                 Choose a plan to get started with all the features
               </p>
             </div>
@@ -478,11 +502,17 @@ export default function BillingPage() {
       <Dialog open={isUpgradeOpen} onOpenChange={setIsUpgradeOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Select a Subscription Plan</DialogTitle>
+            <DialogTitle className="text-xl font-bold">
+              Select a Subscription Plan
+            </DialogTitle>
             <DialogDescription>
               {subscription?.plan?.displayName ? (
                 <>
-                  You are currently on the <span className="font-semibold text-foreground">{subscription.plan.displayName}</span> plan. Switch to:
+                  You are currently on the{" "}
+                  <span className="font-semibold text-foreground">
+                    {subscription.plan.displayName}
+                  </span>{" "}
+                  plan. Switch to:
                 </>
               ) : (
                 "Choose the plan that fits your business needs."
@@ -490,13 +520,19 @@ export default function BillingPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex flex-col gap-4 mt-4">
+          <div className="mt-4 flex flex-col gap-4">
             {(() => {
               const currentPlanName = subscription?.plan?.name || ""
-              const isTrial = currentPlanName === "trial" || currentPlanName === "free"
-              const isInactive = !subscription || subscription.status === "cancelled" || subscription.status === "expired"
+              const isTrial =
+                currentPlanName === "trial" || currentPlanName === "free"
+              const isInactive =
+                !subscription ||
+                subscription.status === "cancelled" ||
+                subscription.status === "expired"
 
-              const plansToShow = PLANS.filter((p) => p.id === "basic" || p.id === "pro").filter((plan) => {
+              const plansToShow = PLANS.filter(
+                (p) => p.id === "basic" || p.id === "pro"
+              ).filter((plan) => {
                 if (isInactive || isTrial) {
                   return true
                 }
@@ -508,41 +544,64 @@ export default function BillingPage() {
               return plansToShow.map((plan) => {
                 const isCurrent = subscription?.plan?.id === plan.id
                 return (
-                  <Card key={plan.id} className={`flex flex-col border-border/80 transition-all ${plan.highlight ? "ring-2 ring-primary bg-primary/5" : ""} ${isCurrent ? "opacity-90" : ""}`}>
+                  <Card
+                    key={plan.id}
+                    className={`flex flex-col border-border/80 transition-all ${plan.highlight ? "bg-primary/5 ring-2 ring-primary" : ""} ${isCurrent ? "opacity-90" : ""}`}
+                  >
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <CardTitle className="text-base font-bold">{plan.displayName}</CardTitle>
+                          <CardTitle className="text-base font-bold">
+                            {plan.displayName}
+                          </CardTitle>
                           {plan.badge && (
-                            <Badge variant="default" className="text-[9px] uppercase font-bold tracking-wider py-0.5 px-1.5">
+                            <Badge
+                              variant="default"
+                              className="px-1.5 py-0.5 text-[9px] font-bold tracking-wider uppercase"
+                            >
                               {plan.badge}
                             </Badge>
                           )}
                         </div>
                         <div className="flex items-baseline">
-                          <span className="text-xl font-bold text-foreground">{formatKES(plan.monthlyPrice)}</span>
-                          <span className="text-muted-foreground text-[10px]">/mo</span>
+                          <span className="text-xl font-bold text-foreground">
+                            {formatKES(plan.monthlyPrice)}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">
+                            /mo
+                          </span>
                         </div>
                       </div>
-                      <div className="text-muted-foreground text-xs mt-1">{plan.description}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {plan.description}
+                      </div>
                     </CardHeader>
-                    <CardContent className="pb-4 pt-2">
+                    <CardContent className="pt-2 pb-4">
                       {isCollapsible ? (
                         <>
                           <button
                             type="button"
-                            className="flex items-center justify-between w-full text-xs font-semibold text-foreground/80 mb-2 py-1 hover:text-foreground transition-colors"
-                            onClick={() => setExpandedPlanId(expandedPlanId === plan.id ? null : plan.id)}
+                            className="mb-2 flex w-full items-center justify-between py-1 text-xs font-semibold text-foreground/80 transition-colors hover:text-foreground"
+                            onClick={() =>
+                              setExpandedPlanId(
+                                expandedPlanId === plan.id ? null : plan.id
+                              )
+                            }
                           >
                             <span>Features</span>
-                            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${expandedPlanId === plan.id ? "rotate-180" : ""}`} />
+                            <ChevronDown
+                              className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${expandedPlanId === plan.id ? "rotate-180" : ""}`}
+                            />
                           </button>
-                          
+
                           {expandedPlanId === plan.id && (
-                            <ul className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-muted-foreground animate-in fade-in slide-in-from-top-1 duration-200">
+                            <ul className="grid animate-in grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-muted-foreground duration-200 fade-in slide-in-from-top-1">
                               {plan.features.map((feature, idx) => (
-                                <li key={idx} className="flex items-center gap-1.5">
-                                  <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />
+                                <li
+                                  key={idx}
+                                  className="flex items-center gap-1.5"
+                                >
+                                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-primary" />
                                   <span className="truncate">{feature}</span>
                                 </li>
                               ))}
@@ -551,34 +610,49 @@ export default function BillingPage() {
                         </>
                       ) : (
                         <>
-                          <div className="text-xs font-semibold text-foreground/80 mb-2">Features:</div>
+                          <div className="mb-2 text-xs font-semibold text-foreground/80">
+                            Features:
+                          </div>
                           <ul className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
                             {plan.features.map((feature, idx) => (
-                              <li key={idx} className="flex items-center gap-1.5">
-                                <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />
+                              <li
+                                key={idx}
+                                className="flex items-center gap-1.5"
+                              >
+                                <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-primary" />
                                 <span className="truncate">{feature}</span>
                               </li>
                             ))}
                           </ul>
                         </>
                       )}
-                      
+
                       {(() => {
                         let actionText = "Upgrade"
                         if (!isInactive && !isTrial) {
-                          if (currentPlanName === "pro" && plan.id === "basic") {
+                          if (
+                            currentPlanName === "pro" &&
+                            plan.id === "basic"
+                          ) {
                             actionText = "Downgrade"
-                          } else if (currentPlanName === "basic" && plan.id === "pro") {
+                          } else if (
+                            currentPlanName === "basic" &&
+                            plan.id === "pro"
+                          ) {
                             actionText = "Upgrade"
                           }
                         }
 
                         return (
                           <Button
-                            className="w-full mt-4"
-                            variant={isCurrent ? "outline" : plan.variant as any}
+                            className="mt-4 w-full"
+                            variant={
+                              isCurrent ? "outline" : (plan.variant as any)
+                            }
                             disabled={isCurrent || isSubmitting}
-                            onClick={() => handleUpgrade(plan.id as "basic" | "pro")}
+                            onClick={() =>
+                              handleUpgrade(plan.id as "basic" | "pro")
+                            }
                           >
                             {isSubmitting ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
@@ -603,7 +677,7 @@ export default function BillingPage() {
       <Dialog open={isCancelOpen} onOpenChange={setIsCancelOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive font-bold">
+            <DialogTitle className="flex items-center gap-2 font-bold text-destructive">
               <AlertTriangle className="h-5 w-5" />
               Cancel Subscription
             </DialogTitle>
@@ -611,15 +685,18 @@ export default function BillingPage() {
               Are you sure you want to cancel your subscription?
             </DialogDescription>
           </DialogHeader>
-          <div className="py-2 text-sm text-muted-foreground space-y-2">
+          <div className="space-y-2 py-2 text-sm text-muted-foreground">
             <p>
-              Your features will be suspended immediately. You will lose access to the dashboard, inventory tracking, alerts, and ordering systems.
+              Your features will be suspended immediately. You will lose access
+              to the dashboard, inventory tracking, alerts, and ordering
+              systems.
             </p>
             <p className="font-medium text-destructive">
-              Only the Billing page will remain accessible so you can resume your plan.
+              Only the Billing page will remain accessible so you can resume
+              your plan.
             </p>
           </div>
-          <DialogFooter className="gap-2 sm:gap-0 mt-4">
+          <DialogFooter className="mt-4 gap-2 sm:gap-0">
             <Button
               variant="outline"
               disabled={isSubmitting}
