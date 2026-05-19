@@ -10,7 +10,6 @@ import {
   BarChart3,
   FileText,
   Layers,
-  Loader2,
   Plus,
   ShoppingCart,
   SlidersHorizontal,
@@ -143,7 +142,10 @@ export default function DashboardPage() {
   const revenue = Array.isArray(revenueData) ? revenueData : []
 
   // Dynamic formatting for Revenue YAxis ticks without repeating currency prefix
-  const maxRevVal = Math.max(...revenue.map((item: any) => Number(item[revMetric]) || 0), 0)
+  const maxRevVal = Math.max(
+    ...revenue.map((item) => Number((item as Record<string, unknown>)[revMetric]) || 0),
+    0
+  )
   const formatRevenueTick = (v: number) => {
     if (revMetric === "revenue") {
       if (maxRevVal >= 1000) {
@@ -660,8 +662,16 @@ export default function DashboardPage() {
                 ))}
               </div>
             ) : lowStockItems.length === 0 ? (
-              <div className="p-4 text-center text-sm text-muted-foreground">
-                No low stock items.
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <p className="text-sm text-muted-foreground mb-4">
+                  No low stock items.
+                </p>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/dashboard/orders?action=create">
+                    <ShoppingCart className="mr-1.5 h-3.5 w-3.5" />
+                    Create restock order
+                  </Link>
+                </Button>
               </div>
             ) : (
               lowStockItems.slice(0, 5).map((item) => {
@@ -687,14 +697,16 @@ export default function DashboardPage() {
               })
             )}
           </CardContent>
-          <CardFooter className="justify-end border-none bg-transparent pt-0 pb-6">
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/dashboard/orders">
-                <ShoppingCart className="mr-1.5 h-3.5 w-3.5" />
-                Create restock order
-              </Link>
-            </Button>
-          </CardFooter>
+          {lowStockItems.length > 0 && (
+            <CardFooter className="justify-end border-none bg-transparent pt-0 pb-6">
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/dashboard/orders?action=create">
+                  <ShoppingCart className="mr-1.5 h-3.5 w-3.5" />
+                  Create restock order
+                </Link>
+              </Button>
+            </CardFooter>
+          )}
         </Card>
 
         <Card>

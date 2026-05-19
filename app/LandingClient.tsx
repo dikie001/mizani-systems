@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/table"
 import { Separator } from "@/components/ui/separator"
 import PricingSection from "./landing/pricing.section"
+import { BookDemoModal, ContactSalesModal } from "@/components/landing/lead-modals"
 
 // ─── Animation Variants ──────────────────────────────────────────────────────
 
@@ -281,7 +282,7 @@ const STATUS_COLOR: Record<string, string> = {
   "Out of Stock": "bg-red-500/10    text-red-700    dark:text-red-400",
 }
 
-function HeroSection({ session }: { session: Session | null }) {
+function HeroSection({ session, onBookDemo }: { session: Session | null; onBookDemo: () => void }) {
   return (
     <section className="relative overflow-hidden bg-background pt-20 pb-28 md:pt-28 md:pb-36">
       <HeroBackground />
@@ -330,6 +331,7 @@ function HeroSection({ session }: { session: Session | null }) {
               size="lg"
               variant="outline"
               className="h-10 px-6 text-sm font-medium"
+              onClick={onBookDemo}
             >
               Book a demo
             </Button>
@@ -997,16 +999,22 @@ export default function LandingClient({
 }: {
   session: Session | null
 }) {
+  const [isDemoOpen, setIsDemoOpen] = useState(false)
+  const [isContactOpen, setIsContactOpen] = useState(false)
+
   return (
     <div className="min-h-screen bg-background text-foreground antialiased selection:bg-primary/15">
       <Navbar session={session} />
       <main>
-        <HeroSection session={session} />
+        <HeroSection session={session} onBookDemo={() => setIsDemoOpen(true)} />
         <FeatureSection />
         <ManageSection />
-        <PricingSection />
+        <PricingSection onContactSales={() => setIsContactOpen(true)} />
       </main>
       <Footer />
+
+      <BookDemoModal isOpen={isDemoOpen} onClose={() => setIsDemoOpen(false)} />
+      <ContactSalesModal isOpen={isContactOpen} onClose={() => setIsContactOpen(false)} />
     </div>
   )
 }

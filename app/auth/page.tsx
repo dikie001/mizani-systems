@@ -63,6 +63,7 @@ function AuthContent() {
   const [googleAuthState, setGoogleAuthState] = useState<
     "idle" | "opening" | "signing-in"
   >("idle")
+  const [logoLoading, setLogoLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(() => {
     if (typeof window === "undefined") {
       return null
@@ -212,13 +213,21 @@ function AuthContent() {
 
         <Card className="rounded-2xl border bg-card text-card-foreground shadow-sm">
           <CardHeader className="items-center gap-3 px-6 pt-6 text-center">
-            <Image
-              src="/mizani_logo.png"
-              alt="Logo"
-              width={48}
-              height={48}
-              className="mb-1 h-12 w-12 rounded-xl border border-border object-contain shadow-sm"
-            />
+            <div className="relative mb-1 h-12 w-12 flex items-center justify-center rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+              {logoLoading && (
+                <LoaderCircle className="absolute h-5 w-5 animate-spin text-primary" />
+              )}
+              <Image
+                src="/mizani_logo.png"
+                alt="Logo"
+                width={48}
+                height={48}
+                className={`h-full w-full object-contain transition-opacity duration-200 ${
+                  logoLoading ? "opacity-0" : "opacity-100"
+                }`}
+                onLoad={() => setLogoLoading(false)}
+              />
+            </div>
             <div className="space-y-1">
               <CardTitle className="text-2xl tracking-tight">
                 Continue to Mizani Systems

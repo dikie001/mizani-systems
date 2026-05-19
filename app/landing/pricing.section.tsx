@@ -31,7 +31,7 @@ const CHECK = ({ className = "text-primary" }: { className?: string }) => (
   </svg>
 )
 
-export default function PricingSection() {
+export default function PricingSection({ onContactSales }: { onContactSales?: () => void }) {
   const router = useRouter()
 
   const handleSelectPlan = (planId: string) => {
@@ -170,7 +170,7 @@ export default function PricingSection() {
               Custom contracts · SLA guarantees · SSO · Dedicated infrastructure
             </div>
           </div>
-          <Button variant="outline" className="w-full md:w-auto">
+          <Button variant="outline" className="w-full md:w-auto" onClick={onContactSales}>
             Contact Sales →
           </Button>
         </div>
