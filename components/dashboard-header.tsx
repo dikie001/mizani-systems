@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { NotificationModal } from "@/components/notification-modal"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -85,6 +86,7 @@ export function DashboardHeader() {
   const { data: session, status } = useSession()
   const { data: alertCounts } = useSWR("/api/alerts/counts", fetcher)
   const [isAvatarReady, setIsAvatarReady] = useState(false)
+  const [isAlertsOpen, setIsAlertsOpen] = useState(false)
 
   const userName = session?.user?.name ?? ""
   const userEmail = session?.user?.email ?? ""
@@ -197,15 +199,18 @@ export function DashboardHeader() {
           />
         </div>
 
-        <Button variant="ghost" size="icon" className="relative rounded-full" asChild>
-          <Link href="/dashboard/alerts">
-            <Bell className="h-4 w-4" />
-            {alertCounts && alertCounts.activeAlerts > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white">
-                {alertCounts.activeAlerts}
-              </span>
-            )}
-          </Link>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative rounded-full"
+          onClick={() => setIsAlertsOpen(true)}
+        >
+          <Bell className="h-4 w-4" />
+          {alertCounts && alertCounts.activeAlerts > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white">
+              {alertCounts.activeAlerts}
+            </span>
+          )}
         </Button>
 
         <DropdownMenu>
@@ -321,6 +326,7 @@ export function DashboardHeader() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <NotificationModal open={isAlertsOpen} onOpenChange={setIsAlertsOpen} />
       </div>
     </header>
   )
