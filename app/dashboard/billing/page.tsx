@@ -37,6 +37,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { updateSubscriptionPlan, cancelSubscription } from "@/lib/actions/subscription"
+import { mutate } from "swr"
 
 interface Subscription {
   id: string
@@ -156,7 +157,9 @@ export default function BillingPage() {
       if (res.success) {
         toast.success(`Successfully ${verb} to ${planId === "pro" ? "Professional" : "Basic"} plan!`)
         setIsUpgradeOpen(false)
+        // Refresh local billing data and notify other UI (sidebar) to revalidate
         await fetchBillingData()
+        mutate("/api/subscriptions/current")
       } else {
         toast.error(res.error || `Failed to ${verb === "upgraded" ? "upgrade" : "downgrade"} subscription plan`)
       }
@@ -175,6 +178,7 @@ export default function BillingPage() {
         toast.success("Subscription cancelled successfully.")
         setIsCancelOpen(false)
         await fetchBillingData()
+        mutate("/api/subscriptions/current")
       } else {
         toast.error(res.error || "Failed to cancel subscription")
       }
