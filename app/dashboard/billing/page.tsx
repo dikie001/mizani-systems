@@ -11,6 +11,7 @@ import {
   RefreshCw,
   Download,
   AlertTriangle,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,7 +26,16 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
-import { formatKES } from "@/lib/plans"
+import { formatKES, PLANS } from "@/lib/plans"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { updateSubscriptionPlan, cancelSubscription } from "@/lib/actions/subscription"
 
 interface Subscription {
   id: string
@@ -67,41 +77,82 @@ export default function BillingPage() {
   const [payments, setPayments] = useState<Payment[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
+  const [isUpgradeOpen, setIsUpgradeOpen] = useState(false)
+  const [isCancelOpen, setIsCancelOpen] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const fetchBillingData = async () => {
     if (!(session?.user as any)?.workspaceId) return
+    try {
+      const [subRes, invoicesRes, paymentsRes] = await Promise.all([
+        fetch("/api/subscriptions/current"),
+        fetch("/api/invoices/list"),
+        fetch("/api/payments/list"),
+      ])
 
-    const fetchBillingData = async () => {
-      try {
-        const [subRes, invoicesRes, paymentsRes] = await Promise.all([
-          fetch("/api/subscriptions/current"),
-          fetch("/api/invoices/list"),
-          fetch("/api/payments/list"),
-        ])
-
-        if (subRes.ok) {
-          const subData = await subRes.json()
-          setSubscription(subData)
-        }
-
-        if (invoicesRes.ok) {
-          const invoicesData = await invoicesRes.json()
-          setInvoices(invoicesData)
-        }
-
-        if (paymentsRes.ok) {
-          const paymentsData = await paymentsRes.json()
-          setPayments(paymentsData)
-        }
-      } catch (error) {
-        console.error("Failed to fetch billing data:", error)
-        toast.error("Failed to load billing information")
-      } finally {
-        setLoading(false)
+      if (subRes.ok) {
+        const subData = await subRes.json()
+        setSubscription(subData)
+      } else {
+        setSubscription(null)
       }
-    }
 
+      if (invoicesRes.ok) {
+        const invoicesData = await invoicesRes.json()
+        setInvoices(invoicesData)
+      }
+
+      if (paymentsRes.ok) {
+        const paymentsData = await paymentsRes.json()
+        setPayments(paymentsData)
+      }
+    } catch (error) {
+      console.error("Failed to fetch billing data:", error)
+      toast.error("Failed to load billing information")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
     fetchBillingData()
   }, [(session?.user as any)?.workspaceId])
+
+  const handleUpgrade = async (planId: "basic" | "pro") => {
+    setIsSubmitting(true)
+    try {
+      const res = await updateSubscriptionPlan(planId)
+      if (res.success) {
+        toast.success(`Successfully switched to ${planId === "pro" ? "Professional" : "Basic"} plan!`)
+        setIsUpgradeOpen(false)
+        await fetchBillingData()
+      } else {
+        toast.error(res.error || "Failed to update subscription plan")
+      }
+    } catch (err) {
+      toast.error("An unexpected error occurred")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleCancel = async () => {
+    setIsSubmitting(true)
+    try {
+      const res = await cancelSubscription()
+      if (res.success) {
+        toast.success("Subscription cancelled successfully.")
+        setIsCancelOpen(false)
+        await fetchBillingData()
+      } else {
+        toast.error(res.error || "Failed to cancel subscription")
+      }
+    } catch (err) {
+      toast.error("An unexpected error occurred")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   const formatDate = (date: string | null) => {
     if (!date) return "—"
@@ -115,15 +166,14 @@ export default function BillingPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active":
+      case "trial":
         return "bg-green-500/10 text-green-600"
       case "paid":
-        return "bg-green-500/10 text-green-600"
       case "success":
         return "bg-green-500/10 text-green-600"
       case "pending":
         return "bg-yellow-500/10 text-yellow-600"
       case "cancelled":
-        return "bg-red-500/10 text-red-600"
       case "failed":
         return "bg-red-500/10 text-red-600"
       default:
@@ -221,23 +271,25 @@ export default function BillingPage() {
               )}
             </div>
 
-            {(subscription.status === "active" || subscription.status === "trial") && (
-              <div className="flex gap-2 border-t pt-4">
-                <Button variant="outline" size="sm" asChild>
-                  <a href="/onboarding">Upgrade / Change Plan</a>
+            <div className="flex gap-2 border-t pt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsUpgradeOpen(true)}
+              >
+                Upgrade / Change Plan
+              </Button>
+              {(subscription.status === "active" || subscription.status === "trial") && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive"
+                  onClick={() => setIsCancelOpen(true)}
+                >
+                  Cancel Subscription
                 </Button>
-                {subscription.status === "active" && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-destructive"
-                    onClick={() => toast.success("Please contact support at billing@stockvault.com to cancel your paid plan.")}
-                  >
-                    Cancel Subscription
-                  </Button>
-                )}
-              </div>
-            )}
+              )}
+            </div>
           </CardContent>
         </Card>
       ) : (
@@ -250,8 +302,12 @@ export default function BillingPage() {
                 Choose a plan to get started with all the features
               </p>
             </div>
-            <Button className="ml-auto" size="sm" asChild>
-              <a href="/pricing">View Plans</a>
+            <Button
+              className="ml-auto"
+              size="sm"
+              onClick={() => setIsUpgradeOpen(true)}
+            >
+              Select Plan
             </Button>
           </CardContent>
         </Card>
@@ -382,6 +438,113 @@ export default function BillingPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Upgrade / Change Plan Dialog */}
+      <Dialog open={isUpgradeOpen} onOpenChange={setIsUpgradeOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">Select a Subscription Plan</DialogTitle>
+            <DialogDescription>
+              Choose the plan that fits your business needs. Upgrade or downgrade at any time.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-6 md:grid-cols-2 mt-4">
+            {PLANS.filter((p) => p.id === "basic" || p.id === "pro").map((plan) => {
+              const isCurrent = subscription?.plan?.id === plan.id || subscription?.plan?.name === plan.id
+              return (
+                <Card key={plan.id} className={`flex flex-col border-border/80 ${plan.highlight ? "ring-2 ring-primary bg-primary/5" : ""}`}>
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg font-bold">{plan.displayName}</CardTitle>
+                      {plan.badge && (
+                        <Badge variant="default" className="text-[10px] uppercase font-bold tracking-wider">
+                          {plan.badge}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="text-muted-foreground text-xs mt-1 min-h-[32px]">{plan.description}</div>
+                    <div className="mt-4">
+                      <span className="text-2xl font-bold text-foreground">{formatKES(plan.monthlyPrice)}</span>
+                      <span className="text-muted-foreground text-xs">/month</span>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="flex-1 pb-6 space-y-4">
+                    <ul className="space-y-2 text-xs text-muted-foreground flex-1">
+                      {plan.features.map((feature, idx) => (
+                        <li key={idx} className="flex items-center gap-2">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <Button
+                      className="w-full mt-4"
+                      variant={isCurrent ? "outline" : plan.variant as any}
+                      disabled={isCurrent || isSubmitting}
+                      onClick={() => handleUpgrade(plan.id as "basic" | "pro")}
+                    >
+                      {isSubmitting ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : isCurrent ? (
+                        "Current Plan"
+                      ) : (
+                        `Upgrade to ${plan.displayName}`
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Subscription Dialog */}
+      <Dialog open={isCancelOpen} onOpenChange={setIsCancelOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive font-bold">
+              <AlertTriangle className="h-5 w-5" />
+              Cancel Subscription
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              Are you sure you want to cancel your subscription?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2 text-sm text-muted-foreground space-y-2">
+            <p>
+              Your features will be suspended immediately. You will lose access to the dashboard, inventory tracking, alerts, and ordering systems.
+            </p>
+            <p className="font-medium text-destructive">
+              Only the Billing page will remain accessible so you can resume your plan.
+            </p>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0 mt-4">
+            <Button
+              variant="outline"
+              disabled={isSubmitting}
+              onClick={() => setIsCancelOpen(false)}
+            >
+              No, keep active
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={isSubmitting}
+              onClick={handleCancel}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Cancelling...
+                </>
+              ) : (
+                "Yes, cancel subscription"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
