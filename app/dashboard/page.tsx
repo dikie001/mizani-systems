@@ -45,7 +45,6 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
-import { Progress } from "@/components/ui/progress"
 import {
   Table,
   TableBody,
@@ -647,17 +646,14 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {lowLoading ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {[...Array(3)].map((_, idx) => (
-                  <div key={idx} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Skeleton className="h-4 w-28" />
-                        <Skeleton className="h-3 w-16" />
-                      </div>
-                      <Skeleton className="h-3 w-8" />
+                  <div key={idx} className="flex items-center justify-between border-b border-border/40 pb-2.5 last:border-0 last:pb-0">
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-3 w-16" />
                     </div>
-                    <Skeleton className="h-2 w-full rounded-full" />
+                    <Skeleton className="h-4 w-12" />
                   </div>
                 ))}
               </div>
@@ -674,27 +670,21 @@ export default function DashboardPage() {
                 </Button>
               </div>
             ) : (
-              lowStockItems.slice(0, 5).map((item) => {
-                const percentage = Math.round(
-                  (item.stock / (item.maxStock || 100)) * 100
-                )
-                return (
-                  <div key={item.name} className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <div>
-                        <span className="font-medium">{item.name}</span>
-                        <span className="ml-2 text-xs text-muted-foreground">
-                          {item.category}
-                        </span>
-                      </div>
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {item.stock}/{item.maxStock || 100}
+              <div className="space-y-3">
+                {lowStockItems.slice(0, 5).map((item) => (
+                  <div key={item.name} className="flex items-center justify-between border-b border-border/40 pb-2.5 last:border-0 last:pb-0">
+                    <div>
+                      <span className="font-medium text-sm">{item.name}</span>
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        {item.category}
                       </span>
                     </div>
-                    <Progress value={percentage} className="h-2" />
+                    <span className="font-mono text-sm font-semibold text-destructive">
+                      {item.stock} left
+                    </span>
                   </div>
-                )
-              })
+                ))}
+              </div>
             )}
           </CardContent>
           {lowStockItems.length > 0 && (

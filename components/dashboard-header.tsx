@@ -1,6 +1,7 @@
 "use client"
 
 import { startTransition, useEffect, useState } from "react"
+import useSWR from "swr"
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -34,6 +35,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 const routeLabels: Record<string, string> = {
   alerts: "Stock Alerts",
@@ -80,6 +83,7 @@ export function DashboardHeader() {
   const pathname = usePathname()
   const { theme, setTheme } = useTheme()
   const { data: session, status } = useSession()
+  const { data: alertCounts } = useSWR("/api/alerts/counts", fetcher)
   const [isAvatarReady, setIsAvatarReady] = useState(false)
 
   const userName = session?.user?.name ?? ""
@@ -193,11 +197,15 @@ export function DashboardHeader() {
           />
         </div>
 
-        <Button variant="ghost" size="icon" className="relative rounded-full">
-          <Bell className="h-4 w-4" />
-          <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white">
-            3
-          </span>
+        <Button variant="ghost" size="icon" className="relative rounded-full" asChild>
+          <Link href="/dashboard/alerts">
+            <Bell className="h-4 w-4" />
+            {alertCounts && alertCounts.activeAlerts > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white">
+                {alertCounts.activeAlerts}
+              </span>
+            )}
+          </Link>
         </Button>
 
         <DropdownMenu>
