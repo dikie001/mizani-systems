@@ -60,13 +60,9 @@ export default async function DashboardLayout({
     }
   }
 
-  if (requiresPayment) {
-    redirect("/onboarding")
-  }
-
   return (
     <>
-      <DashboardShell>{children}</DashboardShell>
+      <DashboardShell requiresPayment={requiresPayment}>{children}</DashboardShell>
       <Suspense fallback={null}>
         <CreateWorkspaceModal />
       </Suspense>

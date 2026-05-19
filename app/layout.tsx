@@ -1,20 +1,9 @@
 import type { Metadata } from "next"
-import { Outfit, Geist_Mono } from "next/font/google"
 
 import "./globals.css"
 import { Providers } from "@/components/providers"
 import { Toaster } from "sonner"
 import { cn } from "@/lib/utils"
-
-const fontSans = Outfit({
-  subsets: ["latin"],
-  variable: "--font-sans",
-})
-
-const fontMono = Geist_Mono({
-  subsets: ["latin"],
-  variable: "--font-mono",
-})
 
 export const metadata: Metadata = {
   title: "Mizani Systems — Precision Inventory Tracking",
@@ -33,8 +22,6 @@ export default function RootLayout({
       suppressHydrationWarning
       className={cn(
         "antialiased",
-        fontSans.variable,
-        fontMono.variable,
         "font-sans"
       )}
     >
