@@ -10,6 +10,7 @@ import {
   Home,
   ShieldAlert,
   CreditCard,
+  Sparkles,
 } from "lucide-react"
 
 import { Separator } from "@/components/ui/separator"
@@ -35,6 +36,11 @@ const adminNavItems = [
     title: "Global Activity Trail",
     icon: Activity,
     href: "/super-admin/audit",
+  },
+  {
+    title: "Demo & Sales Leads",
+    icon: Sparkles,
+    href: "/super-admin/leads",
   },
 ]
 
