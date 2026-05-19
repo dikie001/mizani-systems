@@ -5,10 +5,11 @@ import useSWR, { useSWRConfig } from "swr"
 import Link from "next/link"
 import {
   LoaderCircle,
-  CheckCircle2,
   ExternalLink,
   ShoppingCart,
   Trash2,
+  Bell,
+  Check,
 } from "lucide-react"
 import {
   Dialog,
@@ -107,7 +108,10 @@ export function NotificationModal({ open, onOpenChange }: NotificationModalProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[420px] md:top-[68px] md:right-6 md:left-auto md:translate-x-0 md:translate-y-0 gap-0 p-0 overflow-hidden rounded-3xl border border-border/70 shadow-2xl">
+      <DialogContent
+        overlayClassName="md:bg-transparent md:backdrop-blur-none"
+        className="sm:max-w-[420px] md:top-[68px] md:right-6 md:left-auto md:translate-x-0 md:translate-y-0 gap-0 p-0 overflow-hidden rounded-xl border border-border/70 shadow-2xl"
+      >
         <DialogHeader className="p-6 pb-4 border-b border-border/50">
           <div className="flex items-center justify-between">
             <div>
@@ -144,16 +148,18 @@ export function NotificationModal({ open, onOpenChange }: NotificationModalProps
               <p className="text-xs text-muted-foreground">Fetching stock alerts...</p>
             </div>
           ) : !alerts || alerts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-center gap-3">
-              <div className="h-12 w-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-                <CheckCircle2 className="h-6 w-6" />
+            <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
+              <div className="relative mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500">
+                <div className="absolute inset-0 rounded-full border border-emerald-500/20 animate-pulse" />
+                <Bell className="h-7 w-7 animate-none" />
+                <div className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-background border-2 border-emerald-500/20 text-emerald-600">
+                  <Check className="h-3.5 w-3.5 stroke-[3]" />
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-semibold">All Caught Up!</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  No active stock warnings in this workspace.
-                </p>
-              </div>
+              <h3 className="font-semibold text-sm">All caught up!</h3>
+              <p className="mt-1.5 text-xs text-muted-foreground max-w-[240px] leading-relaxed">
+                No active stock warnings or critical items in your workspace.
+              </p>
             </div>
           ) : (
             alerts.map((alert) => {
@@ -163,7 +169,7 @@ export function NotificationModal({ open, onOpenChange }: NotificationModalProps
               return (
                 <div
                   key={alert.id}
-                  className="group flex flex-col justify-between gap-3 p-4 rounded-2xl border border-border/40 bg-muted/20 hover:bg-muted/40 hover:border-border/80 transition-all duration-200"
+                  className="group flex flex-col justify-between gap-3 p-4 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/40 hover:border-border/80 transition-all duration-200"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="space-y-1">
@@ -232,9 +238,9 @@ export function NotificationModal({ open, onOpenChange }: NotificationModalProps
         </div>
 
         <DialogFooter className="p-4 bg-muted/15 border-t border-border/50 flex flex-row items-center justify-between gap-2">
-          <p className="text-[10px] text-muted-foreground">
+          {/* <p className="text-[10px] text-muted-foreground">
             Dismissed alerts are logged in the history list.
-          </p>
+          </p> */}
           <Button
             variant="ghost"
             size="sm"
