@@ -33,9 +33,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get the workspace
+    // Get the workspace and current subscription/plan info
     const workspace = await prisma.workspace.findUnique({
       where: { id: workspaceId },
+      include: {
+        selectedPlan: true,
+        subscription: { include: { plan: true } },
+      },
     })
 
     if (!workspace) {
@@ -135,11 +139,64 @@ export async function POST(request: NextRequest) {
       data: { selectedPlanId: dbPlan.id },
     })
 
-    // Initialize payment with Paystack
+    // Determine top-up amount if upgrading from an existing paid plan
+    const currentMonthlyPrice =
+      workspace?.subscription?.plan?.monthlyPrice ?? workspace?.selectedPlan?.monthlyPrice ?? 0
+
+    const topUpAmount = Math.max(0, staticPlan.monthlyPrice - currentMonthlyPrice)
+
+    // If no top-up is required (downgrade or same price), apply plan immediately
+    if (topUpAmount === 0) {
+      // Create or update subscription immediately without charging
+      const existingSub = await prisma.subscription.findUnique({
+        where: { workspaceId },
+      })
+
+      let subscription
+      if (existingSub) {
+        subscription = await prisma.subscription.update({
+          where: { workspaceId },
+          data: {
+            planId: dbPlan.id,
+            status: "active",
+            paymentStatus: "paid",
+            currentBillingCycleStart: new Date(),
+            currentBillingCycleEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            cancelledAt: null,
+            cancelReason: null,
+          },
+        })
+      } else {
+        subscription = await prisma.subscription.create({
+          data: {
+            workspaceId,
+            planId: dbPlan.id,
+            status: "active",
+            paymentStatus: "paid",
+            currentBillingCycleStart: new Date(),
+            currentBillingCycleEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          },
+        })
+      }
+
+      await prisma.workspace.update({
+        where: { id: workspaceId },
+        data: { subscriptionId: subscription.id },
+      })
+
+      return NextResponse.json({
+        success: true,
+        message: "Plan updated — no payment required",
+        subscription,
+      })
+    }
+
+    // Initialize payment with Paystack for the top-up amount
     const reference = `${workspaceId.slice(0, 8)}-${Date.now()}`
     // Paystack amounts are in the smallest currency unit (kobo/cents)
-    // For KES, 1 KES = 100 cents in Paystack
-    const amountInSmallestUnit = Math.round(staticPlan.monthlyPrice * 100)
+    const amountInSmallestUnit = Math.round(topUpAmount * 100)
 
     const callbackUrl = `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/payments/success`
 
@@ -152,6 +209,8 @@ export async function POST(request: NextRequest) {
         workspaceId,
         planId: staticPlan.id,
         planName: staticPlan.displayName,
+        topUp: true,
+        topUpAmount,
         custom_fields: [
           {
             display_name: "Workspace",
@@ -178,7 +237,7 @@ export async function POST(request: NextRequest) {
     const payment = await prisma.payment.create({
       data: {
         workspaceId,
-        amount: staticPlan.monthlyPrice,
+        amount: topUpAmount,
         status: "pending",
         paystackReference: reference,
         paystackAccessCode: paystackResponse.data?.access_code,

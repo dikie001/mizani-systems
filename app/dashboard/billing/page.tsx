@@ -36,10 +36,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  updateSubscriptionPlan,
-  cancelSubscription,
-} from "@/lib/actions/subscription"
+import { cancelSubscription } from "@/lib/actions/subscription"
 import { mutate } from "swr"
 
 interface Subscription {
@@ -169,22 +166,40 @@ export default function BillingPage() {
     }
 
     try {
-      const res = await updateSubscriptionPlan(planId)
-      if (res.success) {
+      const workspaceId = (session?.user as any)?.workspaceId
+      const response = await fetch("/api/payments/initialize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId, workspaceId }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        toast.error(data.error || "Failed to initialize payment")
+        return
+      }
+
+      // If API returned an authorization URL, redirect user to Paystack checkout
+      if (data.authorizationUrl) {
+        window.location.href = data.authorizationUrl
+        return
+      }
+
+      // Otherwise, the API applied the plan immediately (no top-up required)
+      if (data.success) {
         toast.success(
           `Successfully ${verb} to ${planId === "pro" ? "Professional" : "Basic"} plan!`
         )
         setIsUpgradeOpen(false)
-        // Refresh local billing data and notify other UI (sidebar) to revalidate
         await fetchBillingData()
         mutate("/api/subscriptions/current")
-      } else {
-        toast.error(
-          res.error ||
-            `Failed to ${verb === "upgraded" ? "upgrade" : "downgrade"} subscription plan`
-        )
+        return
       }
+
+      toast.error(data.error || "Failed to change plan")
     } catch (err) {
+      console.error(err)
       toast.error("An unexpected error occurred")
     } finally {
       setIsSubmitting(false)
