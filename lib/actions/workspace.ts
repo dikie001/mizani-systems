@@ -162,9 +162,15 @@ export async function createWorkspace(data: {
     }
   }
 
-  // Prefer an explicitly provided plan, otherwise use the user's highest
-  // existing workspace plan so new workspaces inherit the user's plan.
-  const planToUse = data.planId || highestPlan || "trial"
+  // Strictly prefer the user's highest non-trial plan when available.
+  // If the user has a paid plan (basic/pro) in any workspace, always use it.
+  // Otherwise fall back to an explicit `data.planId` or trial.
+  const planToUse =
+    highestPlan !== "trial" ? highestPlan : data.planId || "trial"
+
+  console.log(
+    `Workspace creation plan selection: planToUse=${planToUse}, highestPlan=${highestPlan}, requestedPlan=${data.planId}`
+  )
   const staticPlan = getPlanById(planToUse)
 
   try {
