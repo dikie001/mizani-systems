@@ -227,10 +227,11 @@ export function DashboardHeader() {
                 </>
               ) : (
                 <span
-                  className="flex items-center justify-center"
+                  className="flex items-center justify-center gap-2 text-xs font-medium text-muted-foreground"
                   style={{ width: "7.5rem" }}
                 >
-                  <LoaderCircle className="h-4 w-4 animate-spin text-muted-foreground" />
+                  <LoaderCircle className="h-4 w-4 animate-spin text-primary shrink-0" />
+                  <span>Loading...</span>
                 </span>
               )}
             </Button>

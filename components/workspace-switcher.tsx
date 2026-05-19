@@ -53,12 +53,13 @@ export function WorkspaceSwitcher() {
 
   const [open, setOpen] = React.useState(false)
   const [workspaces, setWorkspaces] = React.useState<Workspace[]>([])
-  const [isLoading, setIsLoading] = React.useState(false)
+  const [isLoading, setIsLoading] = React.useState(true)
   const [isSwitching, setIsSwitching] = React.useState<string | null>(null)
 
   const currentWorkspaceId = session?.user?.workspaceId
   const currentWorkspaceName =
-    session?.user?.workspaceName || "Select Workspace"
+    session?.user?.workspaceName ||
+    (workspaces.length > 0 ? workspaces[0].name : "Select Workspace")
   const displayWorkspaceName = formatWorkspaceName(currentWorkspaceName)
 
   React.useEffect(() => {
@@ -74,10 +75,14 @@ export function WorkspaceSwitcher() {
 
     if (session?.user?.id) {
       loadWorkspaces()
+    } else if (status !== "loading") {
+      setTimeout(() => {
+        setIsLoading(false)
+      }, 0)
     }
-  }, [session?.user?.id, currentWorkspaceId, open])
+  }, [session?.user?.id, currentWorkspaceId, open, status])
 
-  if (status === "loading") {
+  if (status === "loading" || isLoading) {
     return (
       <div
         className={cn(
