@@ -162,7 +162,9 @@ export async function createWorkspace(data: {
     }
   }
 
-  const planToUse = data.planId || "trial"
+  // Prefer an explicitly provided plan, otherwise use the user's highest
+  // existing workspace plan so new workspaces inherit the user's plan.
+  const planToUse = data.planId || highestPlan || "trial"
   const staticPlan = getPlanById(planToUse)
 
   try {
