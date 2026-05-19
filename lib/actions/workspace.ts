@@ -225,8 +225,8 @@ export async function createWorkspace(data: {
           data: {
             workspaceId: newWorkspace.id,
             planId: dbPlan.id,
-            status: isTrial ? "trial" : "inactive",
-            paymentStatus: isTrial ? "paid" : "unpaid",
+            status: isTrial ? "trial" : "active",
+            paymentStatus: "paid",
             currentBillingCycleStart: new Date(),
             currentBillingCycleEnd: isTrial
               ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days for trial

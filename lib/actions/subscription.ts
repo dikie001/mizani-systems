@@ -45,16 +45,14 @@ export async function updateSubscriptionPlan(planId: "basic" | "pro") {
       })
 
       let subscription
-      // Mark the workspace as switching plans but require payment before activating.
-      // Set status to "inactive" and paymentStatus to "unpaid" so billing flow
-      // must complete before features are enabled.
+      // Activate the new plan immediately
       if (existingSub) {
         subscription = await tx.subscription.update({
           where: { workspaceId },
           data: {
             planId: dbPlan.id,
-            status: "inactive",
-            paymentStatus: "unpaid",
+            status: "active",
+            paymentStatus: "paid",
             currentBillingCycleStart: new Date(),
             currentBillingCycleEnd: new Date(
               Date.now() + 30 * 24 * 60 * 60 * 1000
@@ -69,8 +67,8 @@ export async function updateSubscriptionPlan(planId: "basic" | "pro") {
           data: {
             workspaceId,
             planId: dbPlan.id,
-            status: "inactive",
-            paymentStatus: "unpaid",
+            status: "active",
+            paymentStatus: "paid",
             currentBillingCycleStart: new Date(),
             currentBillingCycleEnd: new Date(
               Date.now() + 30 * 24 * 60 * 60 * 1000

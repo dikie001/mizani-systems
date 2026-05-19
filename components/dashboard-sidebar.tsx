@@ -119,34 +119,25 @@ export function DashboardSidebar() {
     (url) => fetch(url).then((res) => (res.ok ? res.json() : null))
   )
 
-  const isInactive =
-    !isSubLoading &&
-    (!subscription ||
-      (subscription.status !== "active" && subscription.status !== "trial"))
+  const mainNav = mainNavItems.map((item) => {
+    if (item.title === "Orders") {
+      return {
+        ...item,
+        badge: counts?.pendingOrders > 0 ? String(counts.pendingOrders) : null,
+      }
+    }
+    return item
+  })
 
-  const mainNav = isInactive
-    ? []
-    : mainNavItems.map((item) => {
-        if (item.title === "Orders") {
-          return {
-            ...item,
-            badge: counts?.pendingOrders > 0 ? String(counts.pendingOrders) : null,
-          }
-        }
-        return item
-      })
-
-  const secondaryNav = isInactive
-    ? secondaryNavItems.filter((item) => item.href === "/dashboard/billing")
-    : secondaryNavItems.map((item) => {
-        if (item.title === "Stock Alerts") {
-          return {
-            ...item,
-            badge: counts?.activeAlerts > 0 ? String(counts.activeAlerts) : null,
-          }
-        }
-        return item
-      })
+  const secondaryNav = secondaryNavItems.map((item) => {
+    if (item.title === "Stock Alerts") {
+      return {
+        ...item,
+        badge: counts?.activeAlerts > 0 ? String(counts.activeAlerts) : null,
+      }
+    }
+    return item
+  })
 
   const userInitials = getUserInitials(
     session?.user?.name,
@@ -166,12 +157,11 @@ export function DashboardSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="gap-4 px-3 py-4 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:gap-3 group-data-[collapsible=icon]:px-1.5 group-data-[collapsible=icon]:py-3">
-        {!isInactive && (
-          <>
-            <SidebarGroup className="px-0 py-0 group-data-[collapsible=icon]:gap-2">
-              <SidebarGroupLabel className="px-2.5 pb-1.5 text-xs font-semibold tracking-normal text-muted-foreground uppercase group-data-[collapsible=icon]:hidden">
-                Workspace
-              </SidebarGroupLabel>
+        <>
+          <SidebarGroup className="px-0 py-0 group-data-[collapsible=icon]:gap-2">
+            <SidebarGroupLabel className="px-2.5 pb-1.5 text-xs font-semibold tracking-normal text-muted-foreground uppercase group-data-[collapsible=icon]:hidden">
+              Workspace
+            </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu className="gap-1.5 group-data-[collapsible=icon]:gap-1">
                   {mainNav.map((item) => (
@@ -201,19 +191,16 @@ export function DashboardSidebar() {
                     </SidebarMenuItem>
                   ))}
                 </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+            </SidebarGroupContent>
+          </SidebarGroup>
 
-            <Separator className="mx-3 w-auto bg-sidebar-border/70 group-data-[collapsible=icon]:hidden" />
-          </>
-        )}
+          <Separator className="mx-3 w-auto bg-sidebar-border/70 group-data-[collapsible=icon]:hidden" />
+        </>
 
         <SidebarGroup className="px-0 py-0 group-data-[collapsible=icon]:gap-2">
-          {!isInactive && (
-            <SidebarGroupLabel className="px-2.5 pb-1.5 text-xs font-semibold tracking-normal text-muted-foreground uppercase group-data-[collapsible=icon]:hidden">
-              More
-            </SidebarGroupLabel>
-          )}
+          <SidebarGroupLabel className="px-2.5 pb-1.5 text-xs font-semibold tracking-normal text-muted-foreground uppercase group-data-[collapsible=icon]:hidden">
+            More
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="gap-1.5 group-data-[collapsible=icon]:gap-1">
               {secondaryNav.map((item) => (
