@@ -11,11 +11,10 @@ export async function GET() {
   const workspaceId = session.user.workspaceId
 
   try {
-    // 1. Fetch active alerts
-    const alerts = await prisma.alert.findMany({
+    const notifications = await prisma.notification.findMany({
       where: {
         workspaceId,
-        status: "active",
+        status: { in: ["unread", "read", "active"] },
       },
       include: {
         product: {
@@ -25,55 +24,24 @@ export async function GET() {
         },
       },
       orderBy: { createdAt: "desc" },
-      take: 15,
+      take: 20,
     })
 
-    // 2. Fetch recent audit logs (workspace activity)
-    const logs = await prisma.auditLog.findMany({
-      where: {
-        workspaceId,
-        type: { in: ["create", "update", "delete", "transfer"] },
-      },
-      orderBy: { createdAt: "desc" },
-      take: 15,
-    })
-
-    // 3. Combine and format
-    const alertItems = alerts.map((a) => ({
-      id: a.id,
-      type: "alert",
-      title: a.product.name,
-      description: `Stock level: ${a.product.stock} items left (minimum threshold is ${a.product.minStock}).`,
-      severity: a.severity,
-      category: a.product.category.name,
-      sku: a.product.sku,
-      stock: a.product.stock,
-      minStock: a.product.minStock,
-      createdAt: a.createdAt.toISOString(),
+    const formatted = notifications.map((n) => ({
+      id: n.id,
+      type: n.type,
+      title: n.title,
+      description: n.description,
+      severity: n.severity,
+      category: n.product?.category?.name || "Workspace",
+      sku: n.product?.sku || "",
+      stock: n.product?.stock || 0,
+      minStock: n.product?.minStock || 0,
+      createdAt: n.createdAt.toISOString(),
+      alertId: n.alertId,
     }))
 
-    const logItems = logs.map((l) => ({
-      id: l.id,
-      type: "activity",
-      title: l.action,
-      description: `${l.entity} action performed.`,
-      severity: "info",
-      category: l.entity,
-      sku: "",
-      stock: 0,
-      minStock: 0,
-      createdAt: l.createdAt.toISOString(),
-    }))
-
-    const unified = [...alertItems, ...logItems]
-
-    // Sort by createdAt descending
-    unified.sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    )
-
-    // Slice to the top 20 notifications
-    return NextResponse.json(unified.slice(0, 20))
+    return NextResponse.json(formatted)
   } catch (error) {
     console.error("Failed to fetch notifications:", error)
     return NextResponse.json(

@@ -95,6 +95,10 @@ export async function updateProductAlerts(
         where: { id: activeAlert.id },
         data: { status: "resolved" },
       })
+      await tx.notification.updateMany({
+        where: { alertId: activeAlert.id },
+        data: { status: "resolved" },
+      })
     }
   } else {
     // It's low-stock or critical
@@ -107,15 +111,35 @@ export async function updateProductAlerts(
           where: { id: activeAlert.id },
           data: { severity },
         })
+        await tx.notification.updateMany({
+          where: { alertId: activeAlert.id },
+          data: {
+            severity,
+            description: `Stock level: ${product.stock} items left (minimum threshold is ${product.minStock}).`,
+          },
+        })
       }
     } else {
       // Create new alert
-      await tx.alert.create({
+      const createdAlert = await tx.alert.create({
         data: {
           productId,
           severity,
           status: "active",
           workspaceId: product.workspaceId,
+        },
+      })
+
+      await tx.notification.create({
+        data: {
+          workspaceId: product.workspaceId,
+          type: "alert",
+          title: product.name,
+          description: `Stock level: ${product.stock} items left (minimum threshold is ${product.minStock}).`,
+          severity,
+          status: "unread",
+          productId,
+          alertId: createdAlert.id,
         },
       })
     }

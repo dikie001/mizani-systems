@@ -1516,7 +1516,26 @@ function InventoryPageContent() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="product-sku">SKU / Item Code *</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="product-sku">SKU / Item Code *</Label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const prefix = (formValues.category || "GEN")
+                        .replace(/[^a-zA-Z]/g, "")
+                        .slice(0, 3)
+                        .toUpperCase() || "GEN";
+                      const digits = Math.floor(1000 + Math.random() * 9000);
+                      setFormValues((prev) => ({
+                        ...prev,
+                        sku: `${prefix}-${digits}`,
+                      }));
+                    }}
+                    className="text-[10px] font-semibold text-primary hover:underline"
+                  >
+                    Auto-Generate
+                  </button>
+                </div>
                 <Input
                   id="product-sku"
                   name="sku"

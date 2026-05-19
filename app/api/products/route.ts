@@ -148,6 +148,18 @@ export async function POST(request: Request) {
         },
       })
 
+      await tx.notification.create({
+        data: {
+          workspaceId,
+          type: "activity",
+          title: `Added product "${createdProduct.name}" (SKU: ${createdProduct.sku})`,
+          description: "New catalog item added.",
+          severity: "info",
+          status: "unread",
+          productId: createdProduct.id,
+        },
+      })
+
       return createdProduct
     })
 
