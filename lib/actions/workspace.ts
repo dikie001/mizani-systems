@@ -81,7 +81,6 @@ export async function switchWorkspace(workspaceId: string) {
         workspaceId,
       },
     })
-
     revalidatePath("/")
     return { success: true }
   } catch (error) {
@@ -149,14 +148,18 @@ export async function createWorkspace(data: {
     workspaceCount >= entitlements.maxWorkspaces
   ) {
     if (highestPlan === "basic") {
-      throw new Error(
-        "Your Basic plan is limited to 3 workspaces. Please upgrade to Professional to create more."
-      )
+      return {
+        success: false,
+        error:
+          "Your Basic plan is limited to 3 workspaces. Please upgrade to Professional to create more.",
+      }
     }
 
-    throw new Error(
-      "Your Free Trial plan is limited to 1 workspace. Please upgrade to create more."
-    )
+    return {
+      success: false,
+      error:
+        "Your Free Trial plan is limited to 1 workspace. Please upgrade to create more.",
+    }
   }
 
   const planToUse = data.planId || "trial"

@@ -502,7 +502,7 @@ export default function OnboardingClient({
                           }`}
                         >
                           {active && (
-                            <Check className="h-2.5 w-2.5 stroke-[3] text-slate-950" />
+                            <Check className="h-2.5 w-2.5 stroke-3 text-slate-950" />
                           )}
                         </div>
                       </button>

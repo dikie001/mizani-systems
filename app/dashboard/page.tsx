@@ -142,7 +142,9 @@ export default function DashboardPage() {
 
   // Dynamic formatting for Revenue YAxis ticks without repeating currency prefix
   const maxRevVal = Math.max(
-    ...revenue.map((item) => Number((item as Record<string, unknown>)[revMetric]) || 0),
+    ...revenue.map(
+      (item) => Number((item as Record<string, unknown>)[revMetric]) || 0
+    ),
     0
   )
   const formatRevenueTick = (v: number) => {
@@ -238,7 +240,8 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <CardTitle>
-                  Revenue Overview {revMetric === "revenue" ? `(${currency})` : ""}
+                  Revenue Overview{" "}
+                  {revMetric === "revenue" ? `(${currency})` : ""}
                 </CardTitle>
                 <CardDescription>
                   {viewInterval === "monthly" ? "Monthly" : "Weekly"} revenue
@@ -311,17 +314,19 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="flex-1">
             {revLoading ? (
-              <div className="h-63 flex flex-col justify-end space-y-4 pb-4">
-                <div className="flex justify-between items-center w-full px-2">
+              <div className="flex h-63 flex-col justify-end space-y-4 pb-4">
+                <div className="flex w-full items-center justify-between px-2">
                   <Skeleton className="h-3.5 w-24" />
                   <Skeleton className="h-3.5 w-16" />
                 </div>
-                <div className="flex items-end gap-3 h-40 w-full px-2">
+                <div className="flex h-40 w-full items-end gap-3 px-2">
                   {[...Array(12)].map((_, i) => (
                     <Skeleton
                       key={i}
-                      className="w-full rounded-t opacity-70 bg-muted/60"
-                      style={{ height: `${25 + (i % 4) * 15 + Math.sin(i) * 10}%` }}
+                      className="w-full rounded-t bg-muted/60 opacity-70"
+                      style={{
+                        height: `${25 + (i % 4) * 15 + Math.sin(i) * 10}%`,
+                      }}
                     />
                   ))}
                 </div>
@@ -446,7 +451,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="flex-1">
             {catLoading ? (
-              <div className="h-62 flex flex-col justify-center space-y-4.5 px-2">
+              <div className="flex h-62 flex-col justify-center space-y-4.5 px-2">
                 {[...Array(4)].map((_, i) => (
                   <div key={i} className="space-y-2">
                     <div className="flex justify-between">
@@ -556,7 +561,10 @@ export default function DashboardPage() {
           {actLoading ? (
             <div className="space-y-4 py-2">
               {[...Array(5)].map((_, idx) => (
-                <div key={idx} className="flex items-center justify-between border-b border-border/40 pb-3.5 pt-3.5 last:border-0 last:pb-0">
+                <div
+                  key={idx}
+                  className="flex items-center justify-between border-b border-border/40 pt-3.5 pb-3.5 last:border-0 last:pb-0"
+                >
                   <div className="flex items-center gap-3">
                     <Skeleton className="h-4 w-16" />
                     <Skeleton className="h-4 w-36" />
@@ -648,7 +656,10 @@ export default function DashboardPage() {
             {lowLoading ? (
               <div className="space-y-3">
                 {[...Array(3)].map((_, idx) => (
-                  <div key={idx} className="flex items-center justify-between border-b border-border/40 pb-2.5 last:border-0 last:pb-0">
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between border-b border-border/40 pb-2.5 last:border-0 last:pb-0"
+                  >
                     <div className="flex items-center gap-2">
                       <Skeleton className="h-4 w-28" />
                       <Skeleton className="h-3 w-16" />
@@ -659,7 +670,7 @@ export default function DashboardPage() {
               </div>
             ) : lowStockItems.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
-                <p className="text-sm text-muted-foreground mb-4">
+                <p className="mb-4 text-sm text-muted-foreground">
                   No low stock items.
                 </p>
                 <Button variant="outline" size="sm" asChild>
@@ -672,9 +683,12 @@ export default function DashboardPage() {
             ) : (
               <div className="space-y-3">
                 {lowStockItems.slice(0, 5).map((item) => (
-                  <div key={item.name} className="flex items-center justify-between border-b border-border/40 pb-2.5 last:border-0 last:pb-0">
+                  <div
+                    key={item.name}
+                    className="flex items-center justify-between border-b border-border/40 pb-2.5 last:border-0 last:pb-0"
+                  >
                     <div>
-                      <span className="font-medium text-sm">{item.name}</span>
+                      <span className="text-sm font-medium">{item.name}</span>
                       <span className="ml-2 text-xs text-muted-foreground">
                         {item.category}
                       </span>
