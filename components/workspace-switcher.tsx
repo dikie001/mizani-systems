@@ -82,7 +82,7 @@ export function WorkspaceSwitcher() {
     }
   }, [session?.user?.id, currentWorkspaceId, open, status])
 
-  if (status === "loading" || isLoading) {
+  if (status === "loading") {
     return (
       <div
         className={cn(
