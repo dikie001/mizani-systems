@@ -43,6 +43,7 @@ interface Subscription {
   plan: {
     id: string
     displayName: string
+    name: string
     monthlyPrice: number
   }
   status: string
@@ -122,15 +123,15 @@ export default function BillingPage() {
 
   useEffect(() => {
     if (isUpgradeOpen) {
-      const currentPlanId = subscription?.plan?.id || ""
-      const isTrial = currentPlanId === "trial"
+      const currentPlanName = subscription?.plan?.name || ""
+      const isTrial = currentPlanName === "trial" || currentPlanName === "free"
       const isInactive = !subscription || subscription.status === "cancelled" || subscription.status === "expired"
 
       const plans = PLANS.filter((p) => p.id === "basic" || p.id === "pro").filter((plan) => {
         if (isInactive || isTrial) {
           return true
         }
-        return plan.id !== currentPlanId
+        return plan.id !== currentPlanName
       })
 
       if (plans.length > 0) {
@@ -478,16 +479,18 @@ export default function BillingPage() {
 
           <div className="flex flex-col gap-4 mt-4">
             {(() => {
-              const currentPlanId = subscription?.plan?.id || ""
-              const isTrial = currentPlanId === "trial"
+              const currentPlanName = subscription?.plan?.name || ""
+              const isTrial = currentPlanName === "trial" || currentPlanName === "free"
               const isInactive = !subscription || subscription.status === "cancelled" || subscription.status === "expired"
 
               const plansToShow = PLANS.filter((p) => p.id === "basic" || p.id === "pro").filter((plan) => {
                 if (isInactive || isTrial) {
                   return true
                 }
-                return plan.id !== currentPlanId
+                return plan.id !== currentPlanName
               })
+
+              const isCollapsible = plansToShow.length > 1
 
               return plansToShow.map((plan) => {
                 const isCurrent = subscription?.plan?.id === plan.id
@@ -511,25 +514,42 @@ export default function BillingPage() {
                       <div className="text-muted-foreground text-xs mt-1">{plan.description}</div>
                     </CardHeader>
                     <CardContent className="pb-4 pt-2">
-                      <button
-                        type="button"
-                        className="flex items-center justify-between w-full text-xs font-semibold text-foreground/80 mb-2 py-1 hover:text-foreground transition-colors"
-                        onClick={() => setExpandedPlanId(expandedPlanId === plan.id ? null : plan.id)}
-                      >
-                        <span>Features</span>
-                        <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${expandedPlanId === plan.id ? "rotate-180" : ""}`} />
-                      </button>
-                      
-                      {expandedPlanId === plan.id && (
-                        <ul className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-muted-foreground animate-in fade-in slide-in-from-top-1 duration-200">
-                          {plan.features.map((feature, idx) => (
-                            <li key={idx} className="flex items-center gap-1.5">
-                              <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />
-                              <span className="truncate">{feature}</span>
-                            </li>
-                          ))}
-                        </ul>
+                      {isCollapsible ? (
+                        <>
+                          <button
+                            type="button"
+                            className="flex items-center justify-between w-full text-xs font-semibold text-foreground/80 mb-2 py-1 hover:text-foreground transition-colors"
+                            onClick={() => setExpandedPlanId(expandedPlanId === plan.id ? null : plan.id)}
+                          >
+                            <span>Features</span>
+                            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${expandedPlanId === plan.id ? "rotate-180" : ""}`} />
+                          </button>
+                          
+                          {expandedPlanId === plan.id && (
+                            <ul className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-muted-foreground animate-in fade-in slide-in-from-top-1 duration-200">
+                              {plan.features.map((feature, idx) => (
+                                <li key={idx} className="flex items-center gap-1.5">
+                                  <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />
+                                  <span className="truncate">{feature}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <div className="text-xs font-semibold text-foreground/80 mb-2">Features:</div>
+                          <ul className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+                            {plan.features.map((feature, idx) => (
+                              <li key={idx} className="flex items-center gap-1.5">
+                                <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />
+                                <span className="truncate">{feature}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </>
                       )}
+                      
                       <Button
                         className="w-full mt-4"
                         variant={isCurrent ? "outline" : plan.variant as any}
