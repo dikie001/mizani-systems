@@ -3,7 +3,11 @@
 import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
-import { getPlanById } from "@/lib/plans"
+import {
+  getHighestPlanName,
+  getPlanById,
+  getPlanEntitlements,
+} from "@/lib/plans"
 
 export async function getWorkspaces() {
   const session = await auth()
@@ -20,17 +24,17 @@ export async function getWorkspaces() {
             id: true,
             name: true,
             slug: true,
-          }
-        }
+          },
+        },
       },
       orderBy: {
         workspace: {
-          name: 'asc'
-        }
-      }
+          name: "asc",
+        },
+      },
     })
 
-    return memberships.map(m => m.workspace)
+    return memberships.map((m) => m.workspace)
   } catch (error) {
     console.error("Failed to fetch workspaces:", error)
     return []
@@ -48,9 +52,9 @@ export async function switchWorkspace(workspaceId: string) {
     where: {
       workspaceId_userId: {
         workspaceId,
-        userId: session.user.id
-      }
-    }
+        userId: session.user.id,
+      },
+    },
   })
 
   if (!membership) {
@@ -60,22 +64,22 @@ export async function switchWorkspace(workspaceId: string) {
   try {
     const workspace = await prisma.workspace.findUnique({
       where: { id: workspaceId },
-      select: { name: true }
+      select: { name: true },
     })
 
     await prisma.user.update({
       where: { id: session.user.id },
-      data: { currentWorkspaceId: workspaceId }
+      data: { currentWorkspaceId: workspaceId },
     })
 
     await prisma.auditLog.create({
       data: {
-        action: `Switched to workspace: ${workspace?.name || 'Unknown'}`,
+        action: `Switched to workspace: ${workspace?.name || "Unknown"}`,
         entity: "Workspace",
         type: "settings",
         userId: session.user.id,
         workspaceId,
-      }
+      },
     })
 
     revalidatePath("/")
@@ -98,15 +102,20 @@ export async function createWorkspace(data: {
     throw new Error("Unauthorized")
   }
 
-  const slug = data.name.toLowerCase().replace(/ /g, "-").replace(/[^\w-]+/g, "")
+  const slug = data.name
+    .toLowerCase()
+    .replace(/ /g, "-")
+    .replace(/[^\w-]+/g, "")
 
   // Ensure user exists in DB and get their correct ID
   const user = await prisma.user.findUnique({
-    where: { email: session.user.email! }
+    where: { email: session.user.email! },
   })
 
   if (!user) {
-    throw new Error("User record not found in database. Please sign out and sign in again.")
+    throw new Error(
+      "User record not found in database. Please sign out and sign in again."
+    )
   }
 
   const userId = user.id
@@ -119,31 +128,35 @@ export async function createWorkspace(data: {
         include: {
           subscription: {
             include: {
-              plan: true
-            }
-          }
-        }
-      }
-    }
+              plan: true,
+            },
+          },
+        },
+      },
+    },
   })
 
   const workspaceCount = memberships.length
-  let highestPlan = "trial"
-  for (const m of memberships) {
-    const planName = m.workspace.subscription?.plan?.name
-    if (planName === "pro") {
-      highestPlan = "pro"
-      break
-    } else if (planName === "basic") {
-      highestPlan = "basic"
-    }
-  }
+  const highestPlan = getHighestPlanName(
+    memberships.map(
+      (membership) => membership.workspace.subscription?.plan?.name
+    )
+  )
+  const entitlements = getPlanEntitlements(highestPlan)
 
-  if (highestPlan === "trial" && workspaceCount >= 1) {
-    throw new Error("Your Free Trial plan is limited to 1 workspace. Please upgrade to create more.")
-  }
-  if (highestPlan === "basic" && workspaceCount >= 3) {
-    throw new Error("Your Basic plan is limited to 3 workspaces. Please upgrade to Professional to create more.")
+  if (
+    entitlements.maxWorkspaces !== null &&
+    workspaceCount >= entitlements.maxWorkspaces
+  ) {
+    if (highestPlan === "basic") {
+      throw new Error(
+        "Your Basic plan is limited to 3 workspaces. Please upgrade to Professional to create more."
+      )
+    }
+
+    throw new Error(
+      "Your Free Trial plan is limited to 1 workspace. Please upgrade to create more."
+    )
   }
 
   const planToUse = data.planId || "trial"
@@ -154,7 +167,7 @@ export async function createWorkspace(data: {
       let dbPlan = null
       if (staticPlan) {
         dbPlan = await tx.plan.findFirst({
-          where: { name: staticPlan.id }
+          where: { name: staticPlan.id },
         })
 
         if (!dbPlan) {
@@ -166,7 +179,7 @@ export async function createWorkspace(data: {
               description: staticPlan.description,
               monthlyPrice: staticPlan.monthlyPrice,
               features: staticPlan.features,
-            }
+            },
           })
         }
       }
@@ -179,7 +192,7 @@ export async function createWorkspace(data: {
           businessType: data.businessType,
           inventorySize: data.inventorySize,
           goals: {
-            set: data.goals || []
+            set: data.goals || [],
           },
           selectedPlanId: dbPlan ? dbPlan.id : undefined,
         },
@@ -207,13 +220,13 @@ export async function createWorkspace(data: {
             currentBillingCycleEnd: isTrial
               ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 days for trial
               : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days default for paid plan
-          }
+          },
         })
 
         // Also update workspace's subscriptionId
         await tx.workspace.update({
           where: { id: newWorkspace.id },
-          data: { subscriptionId: subscription.id }
+          data: { subscriptionId: subscription.id },
         })
       }
 
@@ -231,7 +244,7 @@ export async function createWorkspace(data: {
           type: "create",
           userId: userId,
           workspaceId: newWorkspace.id,
-        }
+        },
       })
 
       await tx.notification.create({
@@ -249,14 +262,24 @@ export async function createWorkspace(data: {
     })
 
     revalidatePath("/")
-    return { success: true, workspaceId: workspace.id, workspaceName: workspace.name }
+    return {
+      success: true,
+      workspaceId: workspace.id,
+      workspaceName: workspace.name,
+    }
   } catch (error) {
     console.error("Failed to create workspace:", error)
-    return { success: false, error: "Failed to create workspace. Please try again." }
+    return {
+      success: false,
+      error: "Failed to create workspace. Please try again.",
+    }
   }
 }
 
-export async function updateWorkspace(workspaceId: string, data: { name?: string, businessType?: string, currency?: string }) {
+export async function updateWorkspace(
+  workspaceId: string,
+  data: { name?: string; businessType?: string; currency?: string }
+) {
   const session = await auth()
   if (!session?.user?.id) {
     throw new Error("Unauthorized")
@@ -267,9 +290,9 @@ export async function updateWorkspace(workspaceId: string, data: { name?: string
     where: {
       workspaceId_userId: {
         workspaceId,
-        userId: session.user.id
-      }
-    }
+        userId: session.user.id,
+      },
+    },
   })
 
   if (!membership || !["OWNER", "ADMIN"].includes(membership.role)) {
@@ -279,7 +302,7 @@ export async function updateWorkspace(workspaceId: string, data: { name?: string
   try {
     const updated = await prisma.workspace.update({
       where: { id: workspaceId },
-      data
+      data,
     })
 
     await prisma.auditLog.create({
@@ -289,7 +312,7 @@ export async function updateWorkspace(workspaceId: string, data: { name?: string
         type: "settings",
         userId: session.user.id,
         workspaceId,
-      }
+      },
     })
 
     revalidatePath("/")

@@ -5,6 +5,7 @@ import {
   parseProductImport,
   productQueryInclude,
 } from "@/lib/inventory"
+import { getPlanEntitlements, getWorkspacePlanName } from "@/lib/plans"
 import prisma from "@/lib/prisma"
 
 export async function POST(request: Request) {
@@ -23,7 +24,8 @@ export async function POST(request: Request) {
       where: { workspaceId },
       include: { plan: true },
     })
-    const planName = subscription?.plan?.name || "trial"
+    const planName = getWorkspacePlanName(subscription)
+    const entitlements = getPlanEntitlements(planName)
     const currentProductCount = await prisma.product.count({
       where: { workspaceId },
     })
@@ -43,16 +45,17 @@ export async function POST(request: Request) {
       }
     }
 
-    if (planName === "trial" && currentProductCount + newItemsCount > 200) {
+    if (
+      entitlements.maxProducts !== null &&
+      currentProductCount + newItemsCount > entitlements.maxProducts
+    ) {
+      const limitLabel =
+        planName === "trial" ? "Free Trial" : "Basic"
+      const upgradeLabel = planName === "trial" ? "Basic" : "Professional"
       return NextResponse.json(
-        { error: `Import failed: Free Trial workspace is limited to 200 SKUs. Creating these would bring total to ${currentProductCount + newItemsCount}. Please upgrade.` },
-        { status: 403 }
-      )
-    }
-
-    if (planName === "basic" && currentProductCount + newItemsCount > 1000) {
-      return NextResponse.json(
-        { error: `Import failed: Basic workspace is limited to 1,000 SKUs. Creating these would bring total to ${currentProductCount + newItemsCount}. Please upgrade to Professional.` },
+        {
+          error: `Import failed: ${limitLabel} workspace is limited to ${entitlements.maxProducts.toLocaleString()} SKUs. Creating these would bring total to ${currentProductCount + newItemsCount}. Please upgrade to ${upgradeLabel}.`,
+        },
         { status: 403 }
       )
     }

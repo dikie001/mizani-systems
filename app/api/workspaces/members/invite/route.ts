@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { auth } from "@/auth"
+import { countAdminSeats, getPlanEntitlements, getWorkspacePlanName } from "@/lib/plans"
 
 export async function POST(req: Request) {
   const session = await auth()
@@ -15,6 +16,13 @@ export async function POST(req: Request) {
   }
 
   try {
+    const subscription = await prisma.subscription.findUnique({
+      where: { workspaceId: session.user.workspaceId },
+      include: { plan: true },
+    })
+    const planName = getWorkspacePlanName(subscription)
+    const entitlements = getPlanEntitlements(planName)
+
     // Check if user already exists
     let user = await prisma.user.findUnique({
       where: { email }
@@ -46,12 +54,37 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "User is already a member of this workspace" }, { status: 400 })
     }
 
+    const normalizedRole = role === "ADMIN" ? "ADMIN" : "MEMBER"
+    if (
+      normalizedRole === "ADMIN" &&
+      entitlements.maxAdminUsers !== null
+    ) {
+      const currentAdminSeats = countAdminSeats(
+        await prisma.workspaceMember.findMany({
+          where: { workspaceId: session.user.workspaceId },
+          select: { role: true },
+        })
+      )
+
+      if (currentAdminSeats >= entitlements.maxAdminUsers) {
+        const planLabel = planName === "trial" ? "Free Trial" : "Basic"
+        const upgradeLabel = planName === "trial" ? "Basic" : "Professional"
+
+        return NextResponse.json(
+          {
+            error: `${planLabel} plans are limited to ${entitlements.maxAdminUsers} admin user${entitlements.maxAdminUsers === 1 ? "" : "s"}. Please upgrade to ${upgradeLabel} to invite another admin.`,
+          },
+          { status: 403 }
+        )
+      }
+    }
+
     // Create membership
     await prisma.workspaceMember.create({
       data: {
         workspaceId: session.user.workspaceId,
         userId: user.id,
-        role: role || "MEMBER",
+        role: normalizedRole,
       }
     })
 

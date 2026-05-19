@@ -10,6 +10,7 @@ import {
   Package,
   ShoppingCart,
   Boxes,
+  Lock,
 } from "lucide-react"
 import {
   Area,
@@ -79,7 +80,20 @@ type TopProduct = {
   units: number
 }
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
+const fetcher = async (url: string) => {
+  const response = await fetch(url)
+  const data = await response.json()
+
+  if (!response.ok) {
+    const error = new Error(data.error || "Failed to load reports") as Error & {
+      status?: number
+    }
+    error.status = response.status
+    throw error
+  }
+
+  return data
+}
 
 const revenueConfig: ChartConfig = {
   revenue: { label: "Revenue", color: "var(--chart-1)" },
@@ -106,19 +120,19 @@ const pieColors = [
 export default function ReportsPage() {
   const [range, setRange] = useState("12m")
 
-  const { data: stats, isLoading: statsLoading } = useSWR(
+  const { data: stats, error: statsError, isLoading: statsLoading } = useSWR(
     `/api/dashboard/reports/stats?range=${range}`,
     fetcher
   )
-  const { data: revenueData, isLoading: revLoading } = useSWR(
+  const { data: revenueData, error: revenueError, isLoading: revLoading } = useSWR(
     `/api/dashboard/revenue?range=${range}`,
     fetcher
   )
-  const { data: categoryData, isLoading: catLoading } = useSWR(
+  const { data: categoryData, error: categoryError, isLoading: catLoading } = useSWR(
     `/api/dashboard/categories?range=${range}`,
     fetcher
   )
-  const { data: topProducts, isLoading: topLoading } = useSWR(
+  const { data: topProducts, error: topProductsError, isLoading: topLoading } = useSWR(
     `/api/dashboard/reports/top-products?range=${range}`,
     fetcher
   )
@@ -144,6 +158,36 @@ export default function ReportsPage() {
     Array.isArray(topProducts) ? topProducts : []
   ) as TopProduct[]
   const pieData = (categoryData ?? []) as CategoryDistribution[]
+  const analyticsError =
+    statsError || revenueError || categoryError || topProductsError
+
+  if (analyticsError instanceof Error && (analyticsError as { status?: number }).status === 403) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center p-6">
+        <Card className="max-w-xl border-border/60 bg-card/80 shadow-lg backdrop-blur-sm">
+          <CardContent className="flex flex-col items-center gap-4 py-10 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10">
+              <Lock className="h-6 w-6 text-primary" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold tracking-tight">
+                Professional Plan Required
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Advanced analytics are available on the Professional plan. Upgrade to unlock revenue trends, category insights, and top-product reports.
+              </p>
+            </div>
+            <a
+              href="/dashboard/billing"
+              className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              Upgrade Plan
+            </a>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   const handleExport = () => {
     window.print()
@@ -439,7 +483,7 @@ export default function ReportsPage() {
                 <Skeleton className="h-32 w-32 rounded-full border-8 border-muted/30 bg-transparent flex items-center justify-center shrink-0">
                   <div className="h-16 w-16 rounded-full bg-background" />
                 </Skeleton>
-                <div className="space-y-2.5 flex-1 max-w-[140px]">
+                <div className="max-w-35 flex-1 space-y-2.5">
                   {[...Array(3)].map((_, i) => (
                     <div key={i} className="flex items-center gap-2">
                       <Skeleton className="h-2.5 w-2.5 rounded-full shrink-0 bg-muted/80" />
