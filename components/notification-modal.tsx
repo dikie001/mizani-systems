@@ -58,7 +58,7 @@ export function NotificationModal({ open, onOpenChange }: NotificationModalProps
   const handleDismiss = async (id: string) => {
     setDismissingIds((prev) => ({ ...prev, [id]: true }))
     try {
-      const response = await fetch(`/api/alerts/${id}`, {
+      const response = await fetch(`/api/notifications/${id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -87,7 +87,7 @@ export function NotificationModal({ open, onOpenChange }: NotificationModalProps
     try {
       await Promise.all(
         activeAlerts.map((alert) =>
-          fetch(`/api/alerts/${alert.id}`, {
+          fetch(`/api/notifications/${alert.id}`, {
             method: "PATCH",
             headers: {
               "Content-Type": "application/json",

@@ -76,7 +76,7 @@ export async function updateProductAlerts(
 ) {
   const product = await tx.product.findUnique({
     where: { id: productId },
-    select: { stock: true, minStock: true, workspaceId: true },
+    select: { stock: true, minStock: true, workspaceId: true, name: true },
   })
 
   if (!product) return
