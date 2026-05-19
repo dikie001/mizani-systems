@@ -126,6 +126,16 @@ export async function PUT(request: Request, context: RouteContext) {
         })
       }
 
+      await tx.auditLog.create({
+        data: {
+          action: `Updated product "${updatedProduct.name}" (SKU: ${updatedProduct.sku})`,
+          entity: "Product",
+          type: "update",
+          userId: session.user.id,
+          workspaceId: existingProduct.workspaceId,
+        },
+      })
+
       return updatedProduct
     })
 
@@ -182,6 +192,16 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
       await tx.stockMovement.deleteMany({
         where: { productId: id },
+      })
+
+      await tx.auditLog.create({
+        data: {
+          action: `Deleted product "${product.name}" (SKU: ${product.sku})`,
+          entity: "Product",
+          type: "delete",
+          userId: session.user.id,
+          workspaceId: product.workspaceId,
+        },
       })
 
       await tx.product.delete({
