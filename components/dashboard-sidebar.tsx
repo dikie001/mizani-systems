@@ -248,32 +248,13 @@ export function DashboardSidebar() {
                 isActive={isNavItemActive(pathname, "/dashboard/settings/billing")}
                 tooltip={subscription?.plan?.displayName || "Free Trial"}
                 size="lg"
-                className={cn(
-                  "flex h-12 w-full items-center rounded-lg border border-sidebar-border/50 px-3 text-sm font-medium transition-all duration-200",
-                  "group-data-[collapsible=icon]:size-11! group-data-[collapsible=icon]:justify-center! group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:rounded-2xl group-data-[collapsible=icon]:border-transparent group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:px-0!",
-                  subscription?.plan?.name === "pro"
-                    ? "bg-gradient-to-r from-violet-500/10 to-indigo-500/10 border-indigo-500/20 text-indigo-200 hover:from-violet-500/15 hover:to-indigo-500/15 hover:border-indigo-500/30 data-[active=true]:bg-violet-500/20 data-[active=true]:border-violet-500/40"
-                    : subscription?.plan?.name === "basic"
-                      ? "bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border-emerald-500/20 text-emerald-200 hover:from-emerald-500/15 hover:to-teal-500/15 hover:border-emerald-500/30 data-[active=true]:bg-emerald-500/20 data-[active=true]:border-emerald-500/40"
-                      : "bg-sidebar-accent/25 hover:bg-sidebar-accent/50 text-sidebar-foreground/80 data-[active=true]:border-transparent data-[active=true]:bg-primary data-[active=true]:text-primary-foreground data-[active=true]:shadow-sm"
-                )}
+                className="flex h-10 w-full items-center rounded-lg border border-sidebar-border/50 bg-sidebar-accent/25 px-3 text-sm font-medium text-sidebar-foreground/80 transition-all duration-200 hover:bg-sidebar-accent/50 data-[active=true]:border-transparent data-[active=true]:bg-primary data-[active=true]:text-primary-foreground data-[active=true]:shadow-sm group-data-[collapsible=icon]:size-11! group-data-[collapsible=icon]:justify-center! group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:rounded-2xl group-data-[collapsible=icon]:border-transparent group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:px-0!"
               >
                 <Link href="/dashboard/settings/billing" onClick={handleNavClick}>
-                  {subscription?.plan?.name === "pro" ? (
-                    <Crown className="h-4 w-4 shrink-0 text-violet-400 group-data-[collapsible=icon]:m-0!" />
-                  ) : subscription?.plan?.name === "basic" ? (
-                    <Sparkles className="h-4 w-4 shrink-0 text-emerald-400 group-data-[collapsible=icon]:m-0!" />
-                  ) : (
-                    <CreditCard className="h-4 w-4 shrink-0 text-muted-foreground group-data-[collapsible=icon]:m-0!" />
-                  )}
-                  <div className="flex flex-col items-start gap-0.5 leading-none ml-2.5 group-data-[collapsible=icon]:hidden">
-                    <span className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase opacity-75">
-                      Plan
-                    </span>
-                    <span className="text-sm font-bold tracking-tight text-foreground">
-                      {subscription?.plan?.displayName || "Free Trial"}
-                    </span>
-                  </div>
+                  <CreditCard className="h-4 w-4 shrink-0 text-muted-foreground group-data-[active=true]/menu-button:text-primary-foreground group-data-[collapsible=icon]:m-0!" />
+                  <span className="ml-2 truncate group-data-[collapsible=icon]:hidden">
+                    {subscription?.plan?.displayName || "Free Trial"} Plan
+                  </span>
                 </Link>
               </SidebarMenuButton>
             )}
