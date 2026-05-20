@@ -49,7 +49,14 @@ type AuditData = {
   activities?: AuditLog[]
 }
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
+const fetcher = async (url: string) => {
+  const res = await fetch(url)
+  if (!res.ok) {
+    const errorMsg = await res.json().catch(() => ({})).then((data) => data.error || "An error occurred")
+    throw new Error(errorMsg)
+  }
+  return res.json()
+}
 
 export default function SuperAdminAuditPage() {
   const { data, error, isLoading, mutate } = useSWR<AuditData>(
@@ -339,7 +346,7 @@ export default function SuperAdminAuditPage() {
                                 </p>
                                 <p className="truncate text-[10px] text-muted-foreground">
                                   {log.user?.email ||
-                                    "system@stockvault.internal"}
+                                    "system@Mizani Systems.internal"}
                                 </p>
                               </div>
                             </div>
@@ -409,7 +416,8 @@ export default function SuperAdminAuditPage() {
                             {log.user?.name || "System"}
                           </p>
                           <span className="mt-0.5 block truncate font-mono text-[8px] text-muted-foreground">
-                            {log.user?.email || "system@stockvault.internal"}
+                            {log.user?.email ||
+                              "system@Mizani Systems.internal"}
                           </span>
                         </div>
                       </div>
@@ -526,7 +534,8 @@ export default function SuperAdminAuditPage() {
                     {selectedLog.user?.name || "System"}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {selectedLog.user?.email || "system@stockvault.internal"}
+                    {selectedLog.user?.email ||
+                      "system@Mizani Systems.internal"}
                   </p>
                 </div>
                 <div className="rounded-lg border border-border p-3">

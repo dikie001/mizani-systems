@@ -36,7 +36,7 @@ import { toast } from "sonner"
 const steps = [
   {
     id: "name",
-    title: "Welcome to StockVault",
+    title: "Welcome to Mizani Systems",
     description: "Let's start with your business name.",
     icon: <Briefcase className="h-4 w-4 text-primary" />,
   },

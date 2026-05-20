@@ -243,7 +243,7 @@ export async function GET() {
       type: l.type,
       user: {
         name: l.user?.name || "System",
-        email: l.user?.email || "system@stockvault.internal",
+        email: l.user?.email || "system@Mizani Systems.internal",
         image: l.user?.image || null,
       },
       workspaceName: l.workspace?.name || null,

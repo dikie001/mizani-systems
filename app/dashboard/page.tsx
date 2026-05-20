@@ -91,7 +91,14 @@ type CategoryStat = {
   value: number
 }
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
+const fetcher = async (url: string) => {
+  const res = await fetch(url)
+  if (!res.ok) {
+    const errorMsg = await res.json().catch(() => ({})).then((data) => data.error || "An error occurred")
+    throw new Error(errorMsg)
+  }
+  return res.json()
+}
 
 const revenueChartConfig: ChartConfig = {
   revenue: { label: "Revenue", color: "var(--chart-1)" },
@@ -135,9 +142,9 @@ export default function DashboardPage() {
     fetcher
   )
 
-  const lowStockItems = (lowStockData ?? []) as LowStockItem[]
-  const recentActivity = (activityData ?? []) as ActivityItem[]
-  const categories = Array.isArray(categoryData) ? categoryData : []
+  const lowStockItems = Array.isArray(lowStockData) ? (lowStockData as LowStockItem[]) : []
+  const recentActivity = Array.isArray(activityData) ? (activityData as ActivityItem[]) : []
+  const categories = Array.isArray(categoryData) ? (categoryData as CategoryStat[]) : []
   const revenue = Array.isArray(revenueData) ? revenueData : []
 
   // Dynamic formatting for Revenue YAxis ticks without repeating currency prefix

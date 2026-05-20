@@ -63,7 +63,7 @@ export function SuperAdminSidebar() {
           {!isCollapsed && (
             <div className="text-left">
               <span className="text-xs font-bold tracking-tight text-foreground">
-                StockVault Admin
+                Mizani Systems Admin
               </span>
               <p className="-mt-0.5 text-[9px] font-semibold tracking-widest text-muted-foreground uppercase">
                 Central Control

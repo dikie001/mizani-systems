@@ -44,6 +44,8 @@ function GoogleIcon() {
 
 function getAuthErrorMessage(error: string | null) {
   switch (error) {
+    case "RateLimitExceeded":
+      return null
     case "AccessDenied":
       return "Google sign-in was denied. Please try again and grant access."
     case "OAuthAccountNotLinked":
@@ -80,6 +82,35 @@ function AuthContent() {
 
   const planId = searchParams.get("plan")
   const selectedPlan = planId ? getPlanById(planId) : null
+
+  const [timeLeft, setTimeLeft] = useState<number | null>(null)
+  const error = searchParams.get("error")
+  const retryAfterParam = searchParams.get("retryAfter")
+
+  useEffect(() => {
+    if (error === "RateLimitExceeded" && retryAfterParam) {
+      const seconds = parseInt(retryAfterParam, 10)
+      if (!isNaN(seconds)) {
+        setTimeLeft(seconds)
+      }
+    }
+  }, [error, retryAfterParam])
+
+  useEffect(() => {
+    if (timeLeft === null || timeLeft <= 0) return
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => (prev !== null && prev > 0 ? prev - 1 : 0))
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [timeLeft])
+
+  const formatTimeLeft = (sec: number) => {
+    const m = Math.floor(sec / 60)
+    const s = sec % 60
+    return `${m}:${s.toString().padStart(2, "0")}`
+  }
 
   useEffect(() => {
     const error = new URLSearchParams(window.location.search).get("error")
@@ -260,10 +291,29 @@ function AuthContent() {
               </Alert>
             )}
 
+            {timeLeft !== null && timeLeft > 0 && (
+              <Alert className="mb-4 border-destructive/30 bg-destructive/5 text-destructive">
+                <Info className="h-4 w-4 text-destructive" />
+                <AlertDescription className="text-sm font-medium">
+                  You have reached the global request limit. Please try again in{" "}
+                  <span className="font-mono font-bold">{formatTimeLeft(timeLeft)}</span>.
+                  <br />
+                  <a
+                    href="https://errors.authjs.dev#autherror"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline text-xs text-muted-foreground hover:text-destructive transition-colors mt-1 inline-block"
+                  >
+                    Read more at AuthJS
+                  </a>
+                </AlertDescription>
+              </Alert>
+            )}
+
             <Button
               className="h-11 w-full rounded-xl"
               onClick={handleGoogleSignIn}
-              disabled={googleAuthState !== "idle"}
+              disabled={googleAuthState !== "idle" || (timeLeft !== null && timeLeft > 0)}
             >
               {googleAuthState !== "idle" ? (
                 <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -274,7 +324,9 @@ function AuthContent() {
                 ? "Opening Google..."
                 : googleAuthState === "signing-in"
                   ? "Signing you in..."
-                  : "Continue with Google"}
+                  : timeLeft !== null && timeLeft > 0
+                    ? `Sign-In Blocked (${formatTimeLeft(timeLeft)})`
+                    : "Continue with Google"}
             </Button>
 
             {errorMessage ? (

@@ -4,8 +4,27 @@ import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import { getPlanById } from "@/lib/plans"
+import { headers } from "next/headers"
+import { evaluateRateLimit } from "@/lib/rate-limit"
 
 export async function updateSubscriptionPlan(planId: "basic" | "pro") {
+  const requestHeaders = (await headers()) as {
+    get(name: string): string | null
+  }
+  const rateLimitDecision = evaluateRateLimit({
+    headers: requestHeaders,
+    nextUrl: {
+      pathname: "/dashboard/billing",
+    },
+  })
+
+  if (!rateLimitDecision.allowed) {
+    return {
+      success: false,
+      error: rateLimitDecision.message,
+    }
+  }
+
   const session = await auth()
   if (!session?.user?.id || !session.user.workspaceId) {
     return { success: false, error: "Unauthorized" }
@@ -126,6 +145,23 @@ export async function updateSubscriptionPlan(planId: "basic" | "pro") {
 }
 
 export async function cancelSubscription() {
+  const requestHeaders = (await headers()) as {
+    get(name: string): string | null
+  }
+  const rateLimitDecision = evaluateRateLimit({
+    headers: requestHeaders,
+    nextUrl: {
+      pathname: "/dashboard/billing",
+    },
+  })
+
+  if (!rateLimitDecision.allowed) {
+    return {
+      success: false,
+      error: rateLimitDecision.message,
+    }
+  }
+
   const session = await auth()
   if (!session?.user?.id || !session.user.workspaceId) {
     return { success: false, error: "Unauthorized" }

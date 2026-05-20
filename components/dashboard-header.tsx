@@ -37,7 +37,14 @@ import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
+const fetcher = async (url: string) => {
+  const res = await fetch(url)
+  if (!res.ok) {
+    const errorMsg = await res.json().catch(() => ({})).then((data) => data.error || "An error occurred")
+    throw new Error(errorMsg)
+  }
+  return res.json()
+}
 
 const routeLabels: Record<string, string> = {
   alerts: "Stock Alerts",

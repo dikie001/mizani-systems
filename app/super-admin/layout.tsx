@@ -7,7 +7,7 @@ import { SuperAdminHeader } from "@/components/super-admin-header"
 import { Suspense } from "react"
 
 export const metadata: Metadata = {
-  title: "Super Admin Control Center | StockVault",
+  title: "Super Admin Control Center | Mizani Systems",
   description:
     "Restricted administrative dashboard for managing registered users, multi-tenant workspaces, system performance, and complete audit trail logs.",
 }
@@ -18,19 +18,22 @@ export default async function SuperAdminLayout({
   children: React.ReactNode
 }) {
   const session = await auth()
-  
+
   if (!session?.user?.email) {
     redirect("/auth")
   }
 
   const superAdminEmail = process.env.SUPER_ADMIN_EMAIL
-  
-  if (!superAdminEmail || session.user.email.toLowerCase() !== superAdminEmail.toLowerCase()) {
+
+  if (
+    !superAdminEmail ||
+    session.user.email.toLowerCase() !== superAdminEmail.toLowerCase()
+  ) {
     redirect("/dashboard")
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col antialiased">
+    <div className="flex min-h-screen flex-col bg-background text-foreground antialiased">
       <SidebarProvider
         style={
           {
@@ -42,15 +45,13 @@ export default async function SuperAdminLayout({
         <Suspense fallback={null}>
           <SuperAdminSidebar />
         </Suspense>
-        
-        <SidebarInset className="h-svh overflow-hidden flex flex-col">
+
+        <SidebarInset className="flex h-svh flex-col overflow-hidden">
           <Suspense fallback={null}>
             <SuperAdminHeader />
           </Suspense>
-          <main className="flex-1 overflow-auto p-4 md:p-6 bg-background text-foreground relative">
-            <div className="max-w-7.5xl mx-auto w-full">
-              {children}
-            </div>
+          <main className="relative flex-1 overflow-auto bg-background p-4 text-foreground md:p-6">
+            <div className="max-w-7.5xl mx-auto w-full">{children}</div>
           </main>
         </SidebarInset>
       </SidebarProvider>
