@@ -3,6 +3,10 @@ import { PrismaAdapter } from "@auth/prisma-adapter"
 import prisma from "@/lib/prisma"
 import { authConfig } from "./auth.config"
 
+function normalizeEmail(email?: string | null) {
+  return email?.replace(/"/g, "").trim().toLowerCase() ?? ""
+}
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
   adapter: PrismaAdapter(prisma),
@@ -12,10 +16,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
       try {
         const superAdminEmail = process.env.SUPER_ADMIN_EMAIL
-        const isSuperAdmin = !!(
-          superAdminEmail &&
-          user.email.toLowerCase() === superAdminEmail.toLowerCase()
-        )
+        const isSuperAdmin =
+          normalizeEmail(user.email) === normalizeEmail(superAdminEmail)
 
         // 1. Increment loginCount and upgrade role if super admin
         await prisma.user.update({
@@ -121,7 +123,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           let role = dbUser.role
 
           if (
-            dbUser.email.toLowerCase() === superAdminEmail.toLowerCase() &&
+            normalizeEmail(dbUser.email) === normalizeEmail(superAdminEmail) &&
             dbUser.role !== "super_admin"
           ) {
             await prisma.user.update({

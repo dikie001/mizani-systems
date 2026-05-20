@@ -5,6 +5,10 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { SuperAdminSidebar } from "@/components/super-admin-sidebar"
 import { SuperAdminHeader } from "@/components/super-admin-header"
 
+function normalizeEmail(email?: string | null) {
+  return email?.replace(/"/g, "").trim().toLowerCase() ?? ""
+}
+
 export const metadata: Metadata = {
   title: "Super Admin Control Center | Mizani Systems",
   description:
@@ -23,10 +27,12 @@ export default async function SuperAdminLayout({
   }
 
   const superAdminEmail = process.env.SUPER_ADMIN_EMAIL
+  const isSuperAdminRole = session.user.role === "super_admin"
 
   if (
-    !superAdminEmail ||
-    session.user.email.toLowerCase() !== superAdminEmail.toLowerCase()
+    !isSuperAdminRole &&
+    (!normalizeEmail(superAdminEmail) ||
+      normalizeEmail(session.user.email) !== normalizeEmail(superAdminEmail))
   ) {
     redirect("/dashboard")
   }

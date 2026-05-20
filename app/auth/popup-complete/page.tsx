@@ -19,7 +19,7 @@ export default function PopupCompletePage() {
             callbackUrl,
             error,
           },
-          window.location.origin,
+          window.location.origin
         )
         window.close()
         return
@@ -34,7 +34,9 @@ export default function PopupCompletePage() {
 
   return (
     <main className="flex min-h-svh items-center justify-center bg-background px-6 text-center">
-      <p className="text-sm text-muted-foreground">Sign-in complete. You can close this window.</p>
+      <p className="text-sm text-muted-foreground">
+        Sign-in complete. You can close this window.
+      </p>
     </main>
   )
 }

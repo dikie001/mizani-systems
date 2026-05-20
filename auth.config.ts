@@ -2,6 +2,10 @@ import type { NextAuthConfig } from "next-auth"
 import Google from "next-auth/providers/google"
 import Credentials from "next-auth/providers/credentials"
 
+function normalizeEmail(email?: string | null) {
+  return email?.replace(/"/g, "").trim().toLowerCase() ?? ""
+}
+
 export const authConfig: NextAuthConfig = {
   providers: [
     Google({
@@ -25,9 +29,12 @@ export const authConfig: NextAuthConfig = {
       const isOnboarding = nextUrl.pathname === "/onboarding"
       const isSuperAdminRoute = nextUrl.pathname.startsWith("/super-admin")
       const isAuthRoute = nextUrl.pathname.startsWith("/auth")
-      
+
       const superAdminEmail = process.env.SUPER_ADMIN_EMAIL
-      const isSuperAdmin = !!(isLoggedIn && superAdminEmail && auth.user.email?.toLowerCase() === superAdminEmail.toLowerCase())
+      const isSuperAdmin = !!(
+        isLoggedIn &&
+        normalizeEmail(auth.user.email) === normalizeEmail(superAdminEmail)
+      )
 
       if (isSuperAdminRoute) {
         if (!isLoggedIn) {
@@ -37,7 +44,7 @@ export const authConfig: NextAuthConfig = {
           return Response.redirect(new URL("/dashboard", nextUrl))
         }
       }
-      
+
       if (isLoggedIn) {
         if (isSuperAdmin) {
           // Super admin should only be allowed on super-admin routes or during auth flow

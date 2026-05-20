@@ -2,6 +2,10 @@ import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { auth } from "@/auth"
 
+function normalizeEmail(email?: string | null) {
+  return email?.replace(/"/g, "").trim().toLowerCase() ?? ""
+}
+
 export async function GET() {
   const session = await auth()
 
@@ -12,16 +16,15 @@ export async function GET() {
   const superAdminEmail = process.env.SUPER_ADMIN_EMAIL
 
   // Extra robust checks (both email matching and DB role validation)
-  const isSuperAdminEmail = !!(
-    superAdminEmail &&
-    session.user.email.toLowerCase() === superAdminEmail.toLowerCase()
-  )
+  const isSuperAdminEmail =
+    normalizeEmail(session.user.email) === normalizeEmail(superAdminEmail)
   const dbUser = await prisma.user.findUnique({
     where: { email: session.user.email },
     select: { role: true },
   })
 
-  const isSuperAdminRole = dbUser?.role === "super_admin"
+  const isSuperAdminRole =
+    session.user.role === "super_admin" || dbUser?.role === "super_admin"
 
   if (!isSuperAdminEmail && !isSuperAdminRole) {
     return NextResponse.json(

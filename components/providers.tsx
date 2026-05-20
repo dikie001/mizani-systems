@@ -64,7 +64,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
           const isGlobalLimit =
             response.headers.get("X-RateLimit-Scope") === "global" ||
             response.headers.get("x-ratelimit-scope") === "global" ||
-            (data.message && data.message.toLowerCase().includes("global request limit"))
+            (data.message &&
+              data.message.toLowerCase().includes("global request limit"))
 
           if (isGlobalLimit) {
             const retryAfter = response.headers.get("retry-after") || "900"
