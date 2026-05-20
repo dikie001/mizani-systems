@@ -59,9 +59,13 @@ export const metadata: Metadata = {
     creator: "@mizanisystems",
   },
   icons: {
-    icon: "/mizani_logo.ico",
-    shortcut: "/mizani_logo.ico",
-    apple: "/mizani_logo.png",
+    icon: [
+      { url: "/mizani_logo.png", type: "image/png" },
+    ],
+    shortcut: "/mizani_logo.png",
+    apple: [
+      { url: "/mizani_logo.png", sizes: "180x180", type: "image/png" },
+    ],
   },
   robots: {
     index: true,
