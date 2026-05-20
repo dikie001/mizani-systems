@@ -4,9 +4,9 @@ import { DashboardShell } from "./dashboard-shell"
 import { CreateWorkspaceModal } from "@/components/modals/create-workspace-modal"
 
 export const metadata: Metadata = {
-  title: "Dashboard | StockVault",
+  title: "Dashboard | Mizani Systems",
   description:
-    "Manage your inventory, track orders, and monitor key metrics from your StockVault dashboard.",
+    "Manage your inventory, track orders, and monitor key metrics from your Mizani Systems dashboard.",
 }
 
 import { Suspense } from "react"
