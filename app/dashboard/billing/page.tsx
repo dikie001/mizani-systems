@@ -39,6 +39,14 @@ import {
 import { cancelSubscription } from "@/lib/actions/subscription"
 import { mutate } from "swr"
 
+type PaymentSummary = {
+  action?: "checkout" | "upgrade" | "downgrade" | "no_change"
+  amount?: number
+  amountLabel?: string
+  headline?: string
+  detail?: string
+}
+
 interface Subscription {
   id: string
   plan: {
@@ -82,8 +90,13 @@ export default function BillingPage() {
 
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false)
   const [isCancelOpen, setIsCancelOpen] = useState(false)
+  const [isPaymentConfirmOpen, setIsPaymentConfirmOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [expandedPlanId, setExpandedPlanId] = useState<string | null>(null)
+  const [pendingPayment, setPendingPayment] = useState<{
+    authorizationUrl: string
+    summary: PaymentSummary | null
+  } | null>(null)
 
   const fetchBillingData = async () => {
     if (!(session?.user as any)?.workspaceId) return
@@ -119,8 +132,17 @@ export default function BillingPage() {
   }
 
   useEffect(() => {
+    const workspaceId = (session?.user as any)?.workspaceId
+    if (!workspaceId) {
+      if (session) {
+        setLoading(false)
+      }
+      return
+    }
+
+    setLoading(true)
     fetchBillingData()
-  }, [(session?.user as any)?.workspaceId])
+  }, [session, (session?.user as any)?.workspaceId])
 
   useEffect(() => {
     if (isUpgradeOpen) {
@@ -172,15 +194,11 @@ export default function BillingPage() {
 
       // If API returned an authorization URL, confirm with user and redirect to Paystack
       if (data.authorizationUrl) {
-        const summary = data.paymentSummary
-        if (summary?.headline || summary?.detail) {
-          const ok = window.confirm(
-            [summary.headline, summary.detail].filter(Boolean).join("\n\n")
-          )
-          if (!ok) return
-        }
-
-        window.location.href = data.authorizationUrl
+        setPendingPayment({
+          authorizationUrl: data.authorizationUrl,
+          summary: data.paymentSummary || null,
+        })
+        setIsPaymentConfirmOpen(true)
         return
       }
 
@@ -254,17 +272,17 @@ export default function BillingPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Billing</h1>
-          <p className="text-sm text-muted-foreground">
-            Manage your subscription and payment methods
-          </p>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          <Skeleton className="h-40" />
-          <Skeleton className="h-40" />
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <div className="text-center">
+            <h1 className="text-xl font-semibold text-foreground">
+              Loading billing data
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Please wait while we load your subscription and payment details.
+            </p>
+          </div>
         </div>
       </div>
     )
@@ -685,6 +703,65 @@ export default function BillingPage() {
               })
             })()}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isPaymentConfirmOpen}
+        onOpenChange={(open) => {
+          setIsPaymentConfirmOpen(open)
+          if (!open) {
+            setPendingPayment(null)
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-125">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">
+              Confirm Payment
+            </DialogTitle>
+            <DialogDescription>
+              Review the payment details before we send you to Paystack.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2 text-sm text-muted-foreground">
+            <div className="rounded-lg border bg-muted/30 p-4">
+              <p className="text-sm font-medium text-foreground">
+                {pendingPayment?.summary?.headline || "Proceed to Paystack"}
+              </p>
+              <p className="mt-2 whitespace-pre-line">
+                {pendingPayment?.summary?.detail ||
+                  "You will be redirected to Paystack to complete the transaction."}
+              </p>
+              {pendingPayment?.summary?.amountLabel && (
+                <p className="mt-3 text-base font-semibold text-foreground">
+                  Amount due: {pendingPayment.summary.amountLabel}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsPaymentConfirmOpen(false)
+                setPendingPayment(null)
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (pendingPayment?.authorizationUrl) {
+                  window.location.href = pendingPayment.authorizationUrl
+                }
+              }}
+            >
+              Continue to Paystack
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

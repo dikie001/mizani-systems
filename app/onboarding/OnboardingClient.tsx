@@ -21,6 +21,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { createWorkspace } from "@/lib/actions/workspace"
 import { getPlanById, formatKES, PLANS } from "@/lib/plans"
 import { toast } from "sonner"
@@ -93,6 +101,14 @@ interface OnboardingClientProps {
   initialInventorySize?: string
 }
 
+type PaymentSummary = {
+  action?: "checkout" | "upgrade" | "downgrade" | "no_change"
+  amount?: number
+  amountLabel?: string
+  headline?: string
+  detail?: string
+}
+
 export default function OnboardingClient({
   initialWorkspaceId,
   initialWorkspaceName,
@@ -133,6 +149,11 @@ export default function OnboardingClient({
   )
 
   const [activePlanId, setActivePlanId] = useState<string>("trial")
+  const [isPaymentConfirmOpen, setIsPaymentConfirmOpen] = useState(false)
+  const [pendingPayment, setPendingPayment] = useState<{
+    authorizationUrl: string
+    summary: PaymentSummary | null
+  } | null>(null)
 
   useEffect(() => {
     const urlPlan = searchParams.get("plan") || initialPlanName
@@ -213,16 +234,11 @@ export default function OnboardingClient({
           }
 
           if (data.authorizationUrl) {
-            const summary = data.paymentSummary
-            if (summary?.headline || summary?.detail) {
-              const ok = window.confirm(
-                [summary.headline, summary.detail].filter(Boolean).join("\n\n")
-              )
-              if (!ok) return
-            }
-
-            toast.success("Redirecting to Paystack...")
-            window.location.href = data.authorizationUrl
+            setPendingPayment({
+              authorizationUrl: data.authorizationUrl,
+              summary: data.paymentSummary || null,
+            })
+            setIsPaymentConfirmOpen(true)
           } else {
             // Free plan confirmed
             await update({
@@ -274,16 +290,11 @@ export default function OnboardingClient({
       }
 
       if (data.authorizationUrl) {
-        const summary = data.paymentSummary
-        if (summary?.headline || summary?.detail) {
-          const ok = window.confirm(
-            [summary.headline, summary.detail].filter(Boolean).join("\n\n")
-          )
-          if (!ok) return
-        }
-
-        toast.success("Redirecting to Paystack...")
-        window.location.href = data.authorizationUrl
+        setPendingPayment({
+          authorizationUrl: data.authorizationUrl,
+          summary: data.paymentSummary || null,
+        })
+        setIsPaymentConfirmOpen(true)
       } else {
         // Free plan confirmed
         await update({
@@ -704,6 +715,65 @@ export default function OnboardingClient({
           Step {currentStep + 1} of {activeSteps.length} · Secure & Encrypted
         </p>
       </div>
+
+      <Dialog
+        open={isPaymentConfirmOpen}
+        onOpenChange={(open) => {
+          setIsPaymentConfirmOpen(open)
+          if (!open) {
+            setPendingPayment(null)
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-125">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">
+              Confirm Payment
+            </DialogTitle>
+            <DialogDescription>
+              Review the payment details before we send you to Paystack.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2 text-sm text-muted-foreground">
+            <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
+              <p className="text-sm font-medium text-foreground">
+                {pendingPayment?.summary?.headline || "Proceed to Paystack"}
+              </p>
+              <p className="mt-2 whitespace-pre-line">
+                {pendingPayment?.summary?.detail ||
+                  "You will be redirected to Paystack to complete the transaction."}
+              </p>
+              {pendingPayment?.summary?.amountLabel && (
+                <p className="mt-3 text-base font-semibold text-foreground">
+                  Amount due: {pendingPayment.summary.amountLabel}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsPaymentConfirmOpen(false)
+                setPendingPayment(null)
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (pendingPayment?.authorizationUrl) {
+                  window.location.href = pendingPayment.authorizationUrl
+                }
+              }}
+            >
+              Continue to Paystack
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

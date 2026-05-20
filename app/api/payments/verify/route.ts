@@ -90,6 +90,7 @@ export async function GET(request: NextRequest) {
         subscription = await prisma.subscription.update({
           where: { id: subscription.id },
           data: {
+            planId: workspace.selectedPlanId!,
             status: "active",
             paymentStatus: "paid",
             paystackAuthorizationCode:
@@ -107,6 +108,7 @@ export async function GET(request: NextRequest) {
       await prisma.workspace.update({
         where: { id: payment.workspaceId },
         data: {
+          selectedPlanId: workspace.selectedPlanId!,
           subscriptionId: subscription.id,
         },
       })
