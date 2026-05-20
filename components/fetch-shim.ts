@@ -28,7 +28,10 @@ if (typeof window !== "undefined" && !(window as any).__fetchShimApplied) {
 
       // Defensive: if /api/auth/session returns HTML (e.g. a redirect page),
       // return `null` JSON so Auth.js doesn't throw "Unexpected token '<'".
-      if (pathname === "/api/auth/session" && contentType.includes("text/html")) {
+      if (
+        pathname === "/api/auth/session" &&
+        contentType.includes("text/html")
+      ) {
         console.warn(
           "fetch-shim: /api/auth/session returned HTML; returning JSON null fallback"
         )
@@ -47,10 +50,8 @@ if (typeof window !== "undefined" && !(window as any).__fetchShimApplied) {
             .json()
             .catch(() => null)
           const isGlobal =
-            (
-              res.headers.get("X-RateLimit-Scope") ||
-              res.headers.get("x-ratelimit-scope")
-            ) === "global" ||
+            (res.headers.get("X-RateLimit-Scope") ||
+              res.headers.get("x-ratelimit-scope")) === "global" ||
             (data?.message &&
               data.message.toLowerCase().includes("global request limit"))
 

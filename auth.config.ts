@@ -29,11 +29,14 @@ export const authConfig: NextAuthConfig = {
       const isOnboarding = nextUrl.pathname === "/onboarding"
       const isSuperAdminRoute = nextUrl.pathname.startsWith("/super-admin")
       const isAuthRoute = nextUrl.pathname.startsWith("/auth")
+      // API routes must pass through so client-side fetches are not redirected to pages
+      const isApiRoute = nextUrl.pathname.startsWith("/api/")
 
       const superAdminEmail = process.env.SUPER_ADMIN_EMAIL
       const isSuperAdmin = !!(
         isLoggedIn &&
-        normalizeEmail(auth.user.email) === normalizeEmail(superAdminEmail)
+        (normalizeEmail(auth.user.email) === normalizeEmail(superAdminEmail) ||
+          (auth.user as any).role === "super_admin")
       )
 
       if (isSuperAdminRoute) {
@@ -47,8 +50,8 @@ export const authConfig: NextAuthConfig = {
 
       if (isLoggedIn) {
         if (isSuperAdmin) {
-          // Super admin should only be allowed on super-admin routes or during auth flow
-          if (!isSuperAdminRoute && !isAuthRoute) {
+          // Only redirect page navigations — never API calls (they return JSON, not HTML)
+          if (!isSuperAdminRoute && !isAuthRoute && !isApiRoute) {
             return Response.redirect(new URL("/super-admin", nextUrl))
           }
         } else {
