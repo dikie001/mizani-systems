@@ -120,7 +120,9 @@ export function DashboardSidebar() {
     (url) => fetch(url).then((res) => (res.ok ? res.json() : null))
   )
   const isPlanLoading =
-    sessionStatus === "loading" || isSubLoading || (workspaceId && subscription === undefined)
+    sessionStatus === "loading" ||
+    isSubLoading ||
+    (workspaceId && subscription === undefined)
 
   const mainNav = mainNavItems.map((item) => {
     if (item.title === "Orders") {
