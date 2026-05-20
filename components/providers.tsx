@@ -27,11 +27,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
             (data.message && data.message.toLowerCase().includes("global request limit"))
 
           if (isGlobalLimit) {
+            const retryAfter = response.headers.get("retry-after") || "900"
             if (!isRateLimitActive) {
               isRateLimitActive = true
 
               toast.error(
-                "You have reached the global request limit. Please try again in 15 minutes.. Read more at https://errors.authjs.dev#autherror",
+                "You have reached the global request limit. Please try again in 15 minutes...",
                 {
                   duration: 5000,
                   onDismiss: () => {
@@ -43,9 +44,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
                 }
               )
 
-              setTimeout(() => {
-                signOut({ callbackUrl: "/auth" })
-              }, 1500)
+              // Hard redirect immediately to log out and show the timer
+              window.location.href = `/auth?error=RateLimitExceeded&retryAfter=${retryAfter}`
             }
           }
         } catch (e) {
