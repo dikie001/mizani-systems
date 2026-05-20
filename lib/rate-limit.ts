@@ -3,128 +3,175 @@ import { NextRequest, NextResponse } from "next/server"
 interface RateLimitEntry {
   count: number
   resetTime: number
+  violations: number // Track abuse for progressive penalties
 }
 
-// Store for GLOBAL rate limiting (per IP, across all endpoints)
-const globalStore = new Map<string, RateLimitEntry>()
+type EndpointType = "auth" | "api" | "admin" | "payment" | "upload" | "search"
 
-// Store for endpoint-specific rate limiting (optional, stricter limits)
-const endpointStore = new Map<string, RateLimitEntry>()
+interface RateLimitConfig {
+  windowMs: number
+  maxRequests: number
+  type: EndpointType
+}
 
-// Cleanup old entries periodically
+// Separate stores for each endpoint type
+const stores: Record<EndpointType, Map<string, RateLimitEntry>> = {
+  auth: new Map(),
+  api: new Map(),
+  admin: new Map(),
+  payment: new Map(),
+  upload: new Map(),
+  search: new Map(),
+}
+
+// Cleanup old entries every minute
 setInterval(() => {
   const now = Date.now()
-  
-  // Clean global store
-  for (const [key, entry] of globalStore.entries()) {
-    if (entry.resetTime < now) {
-      globalStore.delete(key)
-    }
-  }
-  
-  // Clean endpoint store
-  for (const [key, entry] of endpointStore.entries()) {
-    if (entry.resetTime < now) {
-      endpointStore.delete(key)
+  for (const store of Object.values(stores)) {
+    for (const [key, entry] of store.entries()) {
+      if (entry.resetTime < now) {
+        store.delete(key)
+      }
     }
   }
 }, 60000)
 
 /**
- * Get client IP address from request
+ * Get client identifier: IP + User ID if authenticated
+ * Use both for better per-user tracking of authenticated requests
  */
-function getClientIP(request: NextRequest): string {
-  return (
+function getClientKey(request: NextRequest): string {
+  const ip =
     request.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
     request.headers.get("x-real-ip") ||
     "unknown"
-  )
+
+  const userId = request.headers.get("x-user-id")
+  return userId ? `${ip}:${userId}` : ip
 }
 
 /**
- * Get global rate limit config from environment
+ * Determine endpoint type from pathname
  */
-function getGlobalConfig(): { windowMs: number; maxRequests: number } {
-  const windowMs = parseInt(process.env.RATE_LIMIT_WINDOW_MS || "900000")
-  const maxRequests = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "100")
-  return { windowMs, maxRequests }
-}
-
-/**
- * Get endpoint-specific rate limit config (if stricter than global)
- */
-function getEndpointConfig(endpoint: string): { windowMs: number; maxRequests: number } | null {
-  const envKey = endpoint
-    .toUpperCase()
-    .replace(/\//g, "_")
-    .replace(/[^A-Z0-9_]/g, "")
-  
-  const windowMs = process.env[`RATE_LIMIT_${envKey}_WINDOW_MS`]
-  const maxRequests = process.env[`RATE_LIMIT_${envKey}_MAX_REQUESTS`]
-
-  // Only return if both are defined (endpoint has custom limits)
-  if (windowMs && maxRequests) {
-    return {
-      windowMs: parseInt(windowMs),
-      maxRequests: parseInt(maxRequests),
-    }
+function getEndpointType(pathname: string): EndpointType {
+  if (
+    pathname.includes("/auth/") ||
+    pathname.includes("/signup") ||
+    pathname.includes("/login")
+  ) {
+    return "auth"
   }
-  
-  return null
+
+  if (pathname.includes("/super-admin/") || pathname.includes("/admin/")) {
+    return "admin"
+  }
+
+  if (
+    pathname.includes("/payments/") ||
+    pathname.includes("/subscriptions/")
+  ) {
+    return "payment"
+  }
+
+  if (pathname.includes("/upload")) {
+    return "upload"
+  }
+
+  if (pathname.includes("/search")) {
+    return "search"
+  }
+
+  return "api"
 }
 
 /**
- * Check global rate limit (per IP, across all endpoints)
+ * Get rate limit config based on endpoint type
+ * Production-grade defaults from SaaS best practices
  */
-function checkGlobalRateLimit(
-  ip: string,
-  config: { windowMs: number; maxRequests: number }
-): { allowed: boolean; resetTime: number } {
+function getConfig(type: EndpointType): RateLimitConfig {
+  const configs: Record<EndpointType, RateLimitConfig> = {
+    // Auth: Prevent brute force attacks
+    auth: {
+      windowMs: parseInt(process.env.RATE_LIMIT_AUTH_WINDOW_MS || "900000"), // 15 min
+      maxRequests: parseInt(process.env.RATE_LIMIT_AUTH_MAX_REQUESTS || "5"),
+      type: "auth",
+    },
+    // General API: Balanced for authenticated users
+    api: {
+      windowMs: parseInt(process.env.RATE_LIMIT_API_WINDOW_MS || "60000"), // 1 min
+      maxRequests: parseInt(process.env.RATE_LIMIT_API_MAX_REQUESTS || "120"),
+      type: "api",
+    },
+    // Admin: Fewer requests for sensitive operations
+    admin: {
+      windowMs: parseInt(process.env.RATE_LIMIT_ADMIN_WINDOW_MS || "60000"), // 1 min
+      maxRequests: parseInt(process.env.RATE_LIMIT_ADMIN_MAX_REQUESTS || "60"),
+      type: "admin",
+    },
+    // Payment: Very strict to prevent fraud
+    payment: {
+      windowMs: parseInt(process.env.RATE_LIMIT_PAYMENT_WINDOW_MS || "300000"), // 5 min
+      maxRequests: parseInt(process.env.RATE_LIMIT_PAYMENT_MAX_REQUESTS || "5"),
+      type: "payment",
+    },
+    // File uploads: Prevent storage abuse
+    upload: {
+      windowMs: parseInt(process.env.RATE_LIMIT_UPLOAD_WINDOW_MS || "60000"), // 1 min
+      maxRequests: parseInt(process.env.RATE_LIMIT_UPLOAD_MAX_REQUESTS || "10"),
+      type: "upload",
+    },
+    // Search: Allow more requests for legitimate use
+    search: {
+      windowMs: parseInt(process.env.RATE_LIMIT_SEARCH_WINDOW_MS || "60000"), // 1 min
+      maxRequests: parseInt(process.env.RATE_LIMIT_SEARCH_MAX_REQUESTS || "60"),
+      type: "search",
+    },
+  }
+
+  return configs[type]
+}
+
+/**
+ * Check rate limit with progressive penalties for repeated abuse
+ */
+function checkRateLimit(
+  key: string,
+  config: RateLimitConfig
+): { allowed: boolean; resetTime: number; violations: number } {
   const now = Date.now()
-  const entry = globalStore.get(ip)
+  const store = stores[config.type]
+  let entry = store.get(key)
 
   // New or expired entry
   if (!entry || entry.resetTime < now) {
-    globalStore.set(ip, { count: 1, resetTime: now + config.windowMs })
-    return { allowed: true, resetTime: 0 }
+    store.set(key, {
+      count: 1,
+      resetTime: now + config.windowMs,
+      violations: 0,
+    })
+    return { allowed: true, resetTime: 0, violations: 0 }
   }
 
   // Increment count
   if (entry.count < config.maxRequests) {
     entry.count++
-    return { allowed: true, resetTime: 0 }
+    return { allowed: true, resetTime: 0, violations: entry.violations }
   }
 
-  // Rate limited
-  return { allowed: false, resetTime: entry.resetTime }
-}
+  // Rate limited - apply progressive penalties
+  entry.violations += 1
 
-/**
- * Check endpoint-specific rate limit (if configured)
- */
-function checkEndpointRateLimit(
-  ip: string,
-  endpoint: string,
-  config: { windowMs: number; maxRequests: number }
-): { allowed: boolean; resetTime: number } {
-  const now = Date.now()
-  const storeKey = `${endpoint}:${ip}`
-  const entry = endpointStore.get(storeKey)
-
-  // New or expired entry
-  if (!entry || entry.resetTime < now) {
-    endpointStore.set(storeKey, { count: 1, resetTime: now + config.windowMs })
-    return { allowed: true, resetTime: 0 }
+  // Progressive penalty: after 3 violations, exponentially increase block time
+  if (entry.violations >= 3) {
+    const penaltyMinutes = Math.min(entry.violations * 5, 60) // Max 60 min
+    entry.resetTime = now + penaltyMinutes * 60000
   }
 
-  // Increment count
-  if (entry.count < config.maxRequests) {
-    entry.count++
-    return { allowed: true, resetTime: 0 }
+  return {
+    allowed: false,
+    resetTime: entry.resetTime,
+    violations: entry.violations,
   }
-
-  // Rate limited
-  return { allowed: false, resetTime: entry.resetTime }
 }
 
 /**
@@ -139,86 +186,78 @@ function formatTime(ms: number): string {
 }
 
 /**
- * System-wide rate limit middleware
- * Checks both global and endpoint-specific limits
+ * Production-grade rate limiting middleware
+ * - Different limits per endpoint type
+ * - IP + User ID tracking for authenticated users
+ * - Progressive penalties for repeated abuse
+ * - HTTP 429 with clear messaging
  */
 export async function rateLimit(
   request: NextRequest
 ): Promise<NextResponse | null> {
+  // Check if rate limiting is enabled
   if (process.env.RATE_LIMITING_ENABLED === "false") {
     return null
   }
 
   const pathname = request.nextUrl.pathname
 
-  // Skip non-API routes
+  // Skip non-API routes and static assets
   if (!pathname.startsWith("/api/")) {
     return null
   }
 
-  const ip = getClientIP(request)
-  const globalConfig = getGlobalConfig()
+  // Don't rate limit static assets
+  if (
+    pathname.includes("_next") ||
+    pathname.includes(".png") ||
+    pathname.includes(".jpg")
+  ) {
+    return null
+  }
 
-  // Check GLOBAL rate limit first (per IP, across all endpoints)
-  const globalCheck = checkGlobalRateLimit(ip, globalConfig)
-  
-  if (!globalCheck.allowed) {
-    const retryAfterMs = globalCheck.resetTime - Date.now()
+  // Get client key (IP or IP:userId)
+  const clientKey = getClientKey(request)
+
+  // Determine endpoint type and get config
+  const endpointType = getEndpointType(pathname)
+  const config = getConfig(endpointType)
+
+  // Check rate limit
+  const { allowed, resetTime, violations } = checkRateLimit(clientKey, config)
+
+  if (!allowed) {
+    const retryAfterMs = Math.max(0, resetTime - Date.now())
     const retryAfterSeconds = Math.max(1, Math.ceil(retryAfterMs / 1000))
 
     return NextResponse.json(
       {
         error: "Rate limit exceeded",
-        message: `Too many requests from your device. Please try again in ${formatTime(retryAfterMs)}.`,
+        message: `Too many requests. Please try again in ${formatTime(retryAfterMs)}.`,
         details: {
-          limit: `${globalConfig.maxRequests} requests per ${formatTime(globalConfig.windowMs)}`,
+          limit: config.maxRequests,
+          window: formatTime(config.windowMs),
           retryAfter: retryAfterSeconds,
-          type: "global",
+          type: endpointType,
+          violations, // Show how many times they've been blocked (for UX feedback)
         },
       },
       {
         status: 429,
         headers: {
           "Retry-After": retryAfterSeconds.toString(),
+          "X-RateLimit-Limit": config.maxRequests.toString(),
+          "X-RateLimit-Window": `${config.windowMs}ms`,
         },
       }
     )
-  }
-
-  // Check ENDPOINT-SPECIFIC rate limit (if configured)
-  const endpointConfig = getEndpointConfig(pathname)
-  if (endpointConfig) {
-    const endpointCheck = checkEndpointRateLimit(ip, pathname, endpointConfig)
-    
-    if (!endpointCheck.allowed) {
-      const retryAfterMs = endpointCheck.resetTime - Date.now()
-      const retryAfterSeconds = Math.max(1, Math.ceil(retryAfterMs / 1000))
-
-      return NextResponse.json(
-        {
-          error: "Rate limit exceeded",
-          message: `Too many requests to this endpoint. Please try again in ${formatTime(retryAfterMs)}.`,
-          details: {
-            limit: `${endpointConfig.maxRequests} requests per ${formatTime(endpointConfig.windowMs)}`,
-            retryAfter: retryAfterSeconds,
-            type: "endpoint",
-          },
-        },
-        {
-          status: 429,
-          headers: {
-            "Retry-After": retryAfterSeconds.toString(),
-          },
-        }
-      )
-    }
   }
 
   return null
 }
 
 /**
- * Exported for compatibility
+ * Check if rate limiting is enabled globally
  */
 export function isRateLimitingEnabled(): boolean {
   return process.env.RATE_LIMITING_ENABLED !== "false"
