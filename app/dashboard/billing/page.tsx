@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import jsPDF from "jspdf"
+import autoTable from "jspdf-autotable"
 import {
   CreditCard,
   AlertCircle,
@@ -66,10 +68,15 @@ interface Invoice {
   id: string
   invoiceNumber: string
   amount: number
+  currency: string
   status: string
   billingPeriodStart: string
   billingPeriodEnd: string
+  dueDate: string
   paidAt: string | null
+  description: string | null
+  notes: string | null
+  createdAt: string
 }
 
 interface Payment {
@@ -80,6 +87,224 @@ interface Payment {
   createdAt: string
 }
 
+const BRAND = {
+  primary: [124, 58, 237] as const,
+  primaryDark: [88, 28, 135] as const,
+  accent: [245, 243, 255] as const,
+  ink: [25, 18, 36] as const,
+  muted: [92, 84, 104] as const,
+  success: [22, 163, 74] as const,
+  warning: [202, 138, 4] as const,
+}
+
+const formatInvoiceDate = (value: string) =>
+  new Date(value).toLocaleDateString("en-KE", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  })
+
+const loadImageAsDataUrl = (src: string) =>
+  new Promise<string>((resolve, reject) => {
+    const image = new window.Image()
+    image.crossOrigin = "anonymous"
+    image.onload = () => {
+      const canvas = document.createElement("canvas")
+      canvas.width = image.naturalWidth
+      canvas.height = image.naturalHeight
+
+      const context = canvas.getContext("2d")
+      if (!context) {
+        reject(new Error("Unable to access canvas context"))
+        return
+      }
+
+      context.drawImage(image, 0, 0)
+      resolve(canvas.toDataURL("image/png"))
+    }
+    image.onerror = () => reject(new Error("Unable to load logo"))
+    image.src = src
+  })
+
+const getInvoiceStatusLabel = (status: string) => {
+  switch (status) {
+    case "paid":
+      return "Paid"
+    case "overdue":
+      return "Overdue"
+    case "issued":
+      return "Issued"
+    case "cancelled":
+      return "Cancelled"
+    default:
+      return status.charAt(0).toUpperCase() + status.slice(1)
+  }
+}
+
+const getInvoiceStatusColor = (status: string) => {
+  switch (status) {
+    case "paid":
+      return BRAND.success
+    case "overdue":
+      return BRAND.warning
+    case "cancelled":
+      return [220, 38, 38] as const
+    default:
+      return BRAND.primary
+  }
+}
+
+const generateInvoicePdf = async ({
+  invoice,
+  workspaceName,
+}: {
+  invoice: Invoice
+  workspaceName: string
+}) => {
+  const doc = new jsPDF({ unit: "pt", format: "a4" })
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const margin = 40
+  const logo = await loadImageAsDataUrl("/mizani_logo.png").catch(() => null)
+  const statusColor = getInvoiceStatusColor(invoice.status)
+
+  doc.setFillColor(...BRAND.ink)
+  doc.rect(0, 0, pageWidth, 132, "F")
+  doc.setFillColor(...BRAND.primary)
+  doc.rect(0, 132, pageWidth, 10, "F")
+
+  if (logo) {
+    doc.addImage(logo, "PNG", margin, 26, 54, 54)
+  } else {
+    doc.setFillColor(...BRAND.primary)
+    doc.circle(margin + 27, 53, 27, "F")
+  }
+
+  doc.setTextColor(255, 255, 255)
+  doc.setFont("helvetica", "bold")
+  doc.setFontSize(19)
+  doc.text(workspaceName || "Mizani", margin + 72, 51)
+
+  doc.setFont("helvetica", "normal")
+  doc.setFontSize(10)
+  doc.setTextColor(226, 220, 238)
+  doc.text("Invoice document", margin + 72, 69)
+  doc.text("Branded billing statement", margin + 72, 84)
+
+  doc.setFont("helvetica", "bold")
+  doc.setFontSize(22)
+  doc.text(`Invoice #${invoice.invoiceNumber}`, pageWidth - margin, 50, {
+    align: "right",
+  })
+  doc.setFontSize(11)
+  doc.setTextColor(statusColor[0], statusColor[1], statusColor[2])
+  doc.text(getInvoiceStatusLabel(invoice.status), pageWidth - margin, 71, {
+    align: "right",
+  })
+  doc.setTextColor(226, 220, 238)
+  doc.setFont("helvetica", "normal")
+  doc.text(`Generated ${formatInvoiceDate(invoice.createdAt)}`, pageWidth - margin, 88, {
+    align: "right",
+  })
+
+  const sectionTop = 168
+  const cardWidth = (pageWidth - margin * 2 - 16) / 2
+
+  const drawCard = (
+    x: number,
+    y: number,
+    title: string,
+    lines: string[]
+  ) => {
+    doc.setFillColor(...BRAND.accent)
+    doc.setDrawColor(232, 226, 243)
+    doc.roundedRect(x, y, cardWidth, 84, 12, 12, "FD")
+    doc.setTextColor(...BRAND.primaryDark)
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(10)
+    doc.text(title, x + 16, y + 20)
+    doc.setFont("helvetica", "normal")
+    doc.setTextColor(...BRAND.ink)
+    lines.forEach((line, index) => {
+      doc.text(line, x + 16, y + 38 + index * 14)
+    })
+  }
+
+  drawCard(margin, sectionTop, "Billed To", [workspaceName || "Workspace"])
+  drawCard(pageWidth - margin - cardWidth, sectionTop, "Invoice Details", [
+    `Invoice number: ${invoice.invoiceNumber}`,
+    `Due date: ${formatInvoiceDate(invoice.dueDate)}`,
+  ])
+
+  autoTable(doc, {
+    startY: sectionTop + 108,
+    margin: { left: margin, right: margin },
+    head: [["Description", "Billing Period", "Status", "Amount"]],
+    body: [[
+      invoice.description || "Subscription charge",
+      `${formatInvoiceDate(invoice.billingPeriodStart)} - ${formatInvoiceDate(invoice.billingPeriodEnd)}`,
+      getInvoiceStatusLabel(invoice.status),
+      formatKES(invoice.amount),
+    ]],
+    theme: "grid",
+    styles: {
+      font: "helvetica",
+      fontSize: 10,
+      cellPadding: 8,
+      textColor: [33, 24, 40],
+      lineColor: [232, 226, 243],
+    },
+    headStyles: {
+      fillColor: BRAND.primary,
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+    },
+    alternateRowStyles: {
+      fillColor: [250, 248, 255],
+    },
+  })
+
+  const summaryY = (doc as any).lastAutoTable.finalY + 20
+  doc.setFillColor(249, 245, 255)
+  doc.setDrawColor(233, 216, 253)
+  doc.roundedRect(margin, summaryY, pageWidth - margin * 2, 82, 12, 12, "FD")
+  doc.setFont("helvetica", "bold")
+  doc.setFontSize(11)
+  doc.setTextColor(...BRAND.muted)
+  doc.text("Total due", margin + 18, summaryY + 28)
+  doc.setFontSize(22)
+  doc.setTextColor(...BRAND.primaryDark)
+  doc.text(formatKES(invoice.amount), margin + 18, summaryY + 54)
+  doc.setFontSize(10)
+  doc.setTextColor(...BRAND.muted)
+  doc.text(
+    invoice.paidAt ? `Paid on ${formatInvoiceDate(invoice.paidAt)}` : `Due on ${formatInvoiceDate(invoice.dueDate)}`,
+    pageWidth - margin - 18,
+    summaryY + 28,
+    { align: "right" }
+  )
+  if (invoice.notes) {
+    doc.text(`Notes: ${invoice.notes}`, pageWidth - margin - 18, summaryY + 48, {
+      align: "right",
+      maxWidth: 240,
+    })
+  }
+
+  const footerY = summaryY + 108
+  doc.setDrawColor(232, 226, 243)
+  doc.line(margin, footerY, pageWidth - margin, footerY)
+  doc.setFont("helvetica", "normal")
+  doc.setTextColor(...BRAND.muted)
+  doc.setFontSize(9)
+  doc.text(
+    "Generated from the Mizani inventory system. Keep this invoice for your records.",
+    margin,
+    footerY + 18
+  )
+  doc.text("mizani", pageWidth - margin, footerY + 18, { align: "right" })
+
+  doc.save(`invoice-${invoice.invoiceNumber}.pdf`)
+}
+
 export default function BillingPage() {
   const { data: session } = useSession()
   const router = useRouter()
@@ -87,6 +312,7 @@ export default function BillingPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [payments, setPayments] = useState<Payment[]>([])
   const [loading, setLoading] = useState(true)
+  const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<string | null>(null)
 
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false)
   const [isCancelOpen, setIsCancelOpen] = useState(false)
@@ -238,6 +464,22 @@ export default function BillingPage() {
       toast.error("An unexpected error occurred")
     } finally {
       setIsCancelling(false)
+    }
+  }
+
+  const handleDownloadInvoice = async (invoice: Invoice) => {
+    setDownloadingInvoiceId(invoice.id)
+    try {
+      await generateInvoicePdf({
+        invoice,
+        workspaceName: session?.user?.workspaceName || "Mizani",
+      })
+      toast.success("Invoice downloaded")
+    } catch (error) {
+      console.error("Failed to download invoice:", error)
+      toast.error("Failed to generate invoice")
+    } finally {
+      setDownloadingInvoiceId(null)
     }
   }
 
@@ -403,29 +645,6 @@ export default function BillingPage() {
         </Card>
       )}
 
-      {/* Payment Status */}
-      {subscription && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              {subscription.paymentStatus === "paid" ? (
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
-              ) : (
-                <AlertCircle className="h-5 w-5 text-yellow-500" />
-              )}
-              Payment Status
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Badge className={getStatusColor(subscription.paymentStatus)}>
-              {subscription.paymentStatus === "paid"
-                ? "All Payments Up to Date"
-                : "Payment Pending"}
-            </Badge>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Invoices */}
       {invoices.length > 0 && (
         <Card>
@@ -471,9 +690,21 @@ export default function BillingPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-8 w-8 p-0"
+                          className="h-9 gap-2 px-3 text-primary"
+                          onClick={() => handleDownloadInvoice(invoice)}
+                          disabled={downloadingInvoiceId === invoice.id}
                         >
-                          <Download className="h-4 w-4" />
+                          {downloadingInvoiceId === invoice.id ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Downloading
+                            </>
+                          ) : (
+                            <>
+                              <Download className="h-4 w-4" />
+                              Download
+                            </>
+                          )}
                         </Button>
                       </TableCell>
                     </TableRow>
