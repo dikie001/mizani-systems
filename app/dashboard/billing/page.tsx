@@ -4,7 +4,6 @@ import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import jsPDF from "jspdf"
-import autoTable from "jspdf-autotable"
 import {
   CreditCard,
   AlertCircle,
@@ -87,14 +86,16 @@ interface Payment {
   createdAt: string
 }
 
+type RGB = [number, number, number]
+
 const BRAND = {
-  primary: [124, 58, 237] as const,
-  primaryDark: [88, 28, 135] as const,
-  accent: [245, 243, 255] as const,
-  ink: [25, 18, 36] as const,
-  muted: [92, 84, 104] as const,
-  success: [22, 163, 74] as const,
-  warning: [202, 138, 4] as const,
+  primary: [124, 58, 237] as RGB,
+  primaryDark: [88, 28, 135] as RGB,
+  accent: [245, 243, 255] as RGB,
+  ink: [25, 18, 36] as RGB,
+  muted: [92, 84, 104] as RGB,
+  success: [22, 163, 74] as RGB,
+  warning: [202, 138, 4] as RGB,
 }
 
 const formatInvoiceDate = (value: string) =>
@@ -141,14 +142,14 @@ const getInvoiceStatusLabel = (status: string) => {
   }
 }
 
-const getInvoiceStatusColor = (status: string) => {
+const getInvoiceStatusColor = (status: string): RGB => {
   switch (status) {
     case "paid":
       return BRAND.success
     case "overdue":
       return BRAND.warning
     case "cancelled":
-      return [220, 38, 38] as const
+      return [220, 38, 38]
     default:
       return BRAND.primary
   }
@@ -167,129 +168,106 @@ const generateInvoicePdf = async ({
   const logo = await loadImageAsDataUrl("/mizani_logo.png").catch(() => null)
   const statusColor = getInvoiceStatusColor(invoice.status)
 
-  doc.setFillColor(...BRAND.ink)
-  doc.rect(0, 0, pageWidth, 132, "F")
-  doc.setFillColor(...BRAND.primary)
-  doc.rect(0, 132, pageWidth, 10, "F")
+  doc.setFillColor(250, 248, 255)
+  doc.rect(0, 0, pageWidth, 116, "F")
+  doc.setDrawColor(232, 226, 243)
+  doc.line(margin, 116, pageWidth - margin, 116)
 
+  doc.setFillColor(255, 255, 255)
   if (logo) {
-    doc.addImage(logo, "PNG", margin, 26, 54, 54)
+    doc.addImage(logo, "PNG", margin, 28, 38, 38)
   } else {
     doc.setFillColor(...BRAND.primary)
-    doc.circle(margin + 27, 53, 27, "F")
+    doc.circle(margin + 19, 47, 12, "F")
   }
 
-  doc.setTextColor(255, 255, 255)
+  doc.setTextColor(...BRAND.ink)
   doc.setFont("helvetica", "bold")
-  doc.setFontSize(19)
-  doc.text(workspaceName || "Mizani", margin + 72, 51)
-
+  doc.setFontSize(18)
+  doc.text(workspaceName || "Mizani", margin + 52, 43)
   doc.setFont("helvetica", "normal")
-  doc.setFontSize(10)
-  doc.setTextColor(226, 220, 238)
-  doc.text("Invoice document", margin + 72, 69)
-  doc.text("Branded billing statement", margin + 72, 84)
-
-  doc.setFont("helvetica", "bold")
-  doc.setFontSize(22)
-  doc.text(`Invoice #${invoice.invoiceNumber}`, pageWidth - margin, 50, {
-    align: "right",
-  })
-  doc.setFontSize(11)
-  doc.setTextColor(statusColor[0], statusColor[1], statusColor[2])
-  doc.text(getInvoiceStatusLabel(invoice.status), pageWidth - margin, 71, {
-    align: "right",
-  })
-  doc.setTextColor(226, 220, 238)
-  doc.setFont("helvetica", "normal")
-  doc.text(`Generated ${formatInvoiceDate(invoice.createdAt)}`, pageWidth - margin, 88, {
-    align: "right",
-  })
-
-  const sectionTop = 168
-  const cardWidth = (pageWidth - margin * 2 - 16) / 2
-
-  const drawCard = (
-    x: number,
-    y: number,
-    title: string,
-    lines: string[]
-  ) => {
-    doc.setFillColor(...BRAND.accent)
-    doc.setDrawColor(232, 226, 243)
-    doc.roundedRect(x, y, cardWidth, 84, 12, 12, "FD")
-    doc.setTextColor(...BRAND.primaryDark)
-    doc.setFont("helvetica", "bold")
-    doc.setFontSize(10)
-    doc.text(title, x + 16, y + 20)
-    doc.setFont("helvetica", "normal")
-    doc.setTextColor(...BRAND.ink)
-    lines.forEach((line, index) => {
-      doc.text(line, x + 16, y + 38 + index * 14)
-    })
-  }
-
-  drawCard(margin, sectionTop, "Billed To", [workspaceName || "Workspace"])
-  drawCard(pageWidth - margin - cardWidth, sectionTop, "Invoice Details", [
-    `Invoice number: ${invoice.invoiceNumber}`,
-    `Due date: ${formatInvoiceDate(invoice.dueDate)}`,
-  ])
-
-  autoTable(doc, {
-    startY: sectionTop + 108,
-    margin: { left: margin, right: margin },
-    head: [["Description", "Billing Period", "Status", "Amount"]],
-    body: [[
-      invoice.description || "Subscription charge",
-      `${formatInvoiceDate(invoice.billingPeriodStart)} - ${formatInvoiceDate(invoice.billingPeriodEnd)}`,
-      getInvoiceStatusLabel(invoice.status),
-      formatKES(invoice.amount),
-    ]],
-    theme: "grid",
-    styles: {
-      font: "helvetica",
-      fontSize: 10,
-      cellPadding: 8,
-      textColor: [33, 24, 40],
-      lineColor: [232, 226, 243],
-    },
-    headStyles: {
-      fillColor: BRAND.primary,
-      textColor: [255, 255, 255],
-      fontStyle: "bold",
-    },
-    alternateRowStyles: {
-      fillColor: [250, 248, 255],
-    },
-  })
-
-  const summaryY = (doc as any).lastAutoTable.finalY + 20
-  doc.setFillColor(249, 245, 255)
-  doc.setDrawColor(233, 216, 253)
-  doc.roundedRect(margin, summaryY, pageWidth - margin * 2, 82, 12, 12, "FD")
-  doc.setFont("helvetica", "bold")
-  doc.setFontSize(11)
+  doc.setFontSize(9)
   doc.setTextColor(...BRAND.muted)
-  doc.text("Total due", margin + 18, summaryY + 28)
-  doc.setFontSize(22)
-  doc.setTextColor(...BRAND.primaryDark)
-  doc.text(formatKES(invoice.amount), margin + 18, summaryY + 54)
+  doc.text("Invoice", margin + 52, 58)
+
+  doc.setFont("helvetica", "bold")
+  doc.setFontSize(16)
+  doc.setTextColor(...BRAND.ink)
+  doc.text(`INVOICE ${invoice.invoiceNumber}`, pageWidth - margin, 40, {
+    align: "right",
+  })
+  doc.setFont("helvetica", "normal")
   doc.setFontSize(10)
+  doc.setTextColor(statusColor[0], statusColor[1], statusColor[2])
+  doc.text(getInvoiceStatusLabel(invoice.status), pageWidth - margin, 56, {
+    align: "right",
+  })
   doc.setTextColor(...BRAND.muted)
   doc.text(
-    invoice.paidAt ? `Paid on ${formatInvoiceDate(invoice.paidAt)}` : `Due on ${formatInvoiceDate(invoice.dueDate)}`,
-    pageWidth - margin - 18,
-    summaryY + 28,
-    { align: "right" }
-  )
-  if (invoice.notes) {
-    doc.text(`Notes: ${invoice.notes}`, pageWidth - margin - 18, summaryY + 48, {
+    `Issued ${formatInvoiceDate(invoice.createdAt)}`,
+    pageWidth - margin,
+    72,
+    {
       align: "right",
-      maxWidth: 240,
+    }
+  )
+
+  doc.setDrawColor(232, 226, 243)
+  doc.line(margin, 92, pageWidth - margin, 92)
+
+  const contentTop = 128
+  const labelX = margin
+  const valueX = margin + 120
+
+  doc.setFont("helvetica", "bold")
+  doc.setFontSize(9)
+  doc.setTextColor(...BRAND.muted)
+  doc.text("Billed to", labelX, contentTop)
+
+  doc.setFont("helvetica", "normal")
+  doc.setFontSize(11)
+  doc.setTextColor(...BRAND.ink)
+  doc.text(workspaceName || "Workspace", valueX, contentTop)
+
+  doc.setTextColor(...BRAND.muted)
+  doc.setFontSize(10)
+  doc.text("Due date", labelX, contentTop + 20)
+  doc.setTextColor(...BRAND.ink)
+  doc.text(formatInvoiceDate(invoice.dueDate), valueX, contentTop + 20)
+  doc.setFont("helvetica", "bold")
+  doc.setTextColor(...BRAND.primaryDark)
+  doc.setFontSize(20)
+  doc.text(formatKES(invoice.amount), pageWidth - margin, contentTop + 18, {
+    align: "right",
+  })
+  doc.setFont("helvetica", "normal")
+  doc.setFontSize(10)
+  doc.setTextColor(...BRAND.muted)
+  doc.text("Total due", pageWidth - margin, contentTop + 36, {
+    align: "right",
+  })
+
+  if (invoice.description && invoice.description !== "Subscription charge") {
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(10)
+    doc.setTextColor(...BRAND.muted)
+    doc.text("Description", labelX, contentTop + 42)
+    doc.setTextColor(...BRAND.ink)
+    doc.text(invoice.description, valueX, contentTop + 42, {
+      maxWidth: pageWidth - margin * 2 - 120,
     })
   }
 
-  const footerY = summaryY + 108
+  doc.setDrawColor(232, 226, 243)
+  doc.line(margin, contentTop + 70, pageWidth - margin, contentTop + 70)
+
+  if (invoice.notes) {
+    doc.text(`Notes: ${invoice.notes}`, margin, contentTop + 92, {
+      maxWidth: pageWidth - margin * 2,
+    })
+  }
+
+  const footerY = contentTop + 132
   doc.setDrawColor(232, 226, 243)
   doc.line(margin, footerY, pageWidth - margin, footerY)
   doc.setFont("helvetica", "normal")
@@ -312,7 +290,9 @@ export default function BillingPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [payments, setPayments] = useState<Payment[]>([])
   const [loading, setLoading] = useState(true)
-  const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<string | null>(null)
+  const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<
+    string | null
+  >(null)
 
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false)
   const [isCancelOpen, setIsCancelOpen] = useState(false)
@@ -398,56 +378,6 @@ export default function BillingPage() {
     }
   }, [isUpgradeOpen, subscription])
 
-  const handleUpgrade = async (planId: "basic" | "pro") => {
-    setUpgradeLoadingPlanId(planId)
-
-    try {
-      const workspaceId = (session?.user as any)?.workspaceId
-      const response = await fetch("/api/payments/initialize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId, workspaceId }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        toast.error(data.error || "Failed to initialize payment")
-        return
-      }
-
-      // If API returned an authorization URL, confirm with user and redirect to Paystack
-      if (data.authorizationUrl) {
-        setPendingPayment({
-          authorizationUrl: data.authorizationUrl,
-          summary: data.paymentSummary || null,
-        })
-        setIsPaymentConfirmOpen(true)
-        return
-      }
-
-      // Otherwise, the API applied the plan immediately or resolved the plan change without checkout.
-      if (data.success) {
-        const summary = data.paymentSummary
-        toast.success(
-          summary?.detail ||
-            `Successfully updated to ${planId === "pro" ? "Professional" : "Basic"} plan!`
-        )
-        setIsUpgradeOpen(false)
-        await fetchBillingData()
-        mutate("/api/subscriptions/current")
-        return
-      }
-
-      toast.error(data.error || "Failed to change plan")
-    } catch (err) {
-      console.error(err)
-      toast.error("An unexpected error occurred")
-    } finally {
-      setUpgradeLoadingPlanId(null)
-    }
-  }
-
   const handleCancel = async () => {
     setIsCancelling(true)
     try {
@@ -464,6 +394,49 @@ export default function BillingPage() {
       toast.error("An unexpected error occurred")
     } finally {
       setIsCancelling(false)
+    }
+  }
+
+  const handleUpgrade = async (planId: "basic" | "pro") => {
+    const workspaceId = (session?.user as any)?.workspaceId
+    if (!workspaceId) {
+      toast.error("Workspace not found")
+      return
+    }
+
+    setUpgradeLoadingPlanId(planId)
+    try {
+      const response = await fetch("/api/payments/initialize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId, workspaceId }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to initialize payment")
+      }
+
+      if (data.authorizationUrl) {
+        setPendingPayment({
+          authorizationUrl: data.authorizationUrl,
+          summary: data.paymentSummary || null,
+        })
+        setIsPaymentConfirmOpen(true)
+        return
+      }
+
+      toast.success(data.message || "Plan updated successfully")
+      await fetchBillingData()
+      mutate("/api/subscriptions/current")
+      setIsUpgradeOpen(false)
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update plan"
+      )
+    } finally {
+      setUpgradeLoadingPlanId(null)
     }
   }
 
