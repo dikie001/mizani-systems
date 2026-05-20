@@ -102,9 +102,10 @@ function getUserInitials(name?: string | null, email?: string | null) {
 
 export function DashboardSidebar() {
   const pathname = usePathname()
-  const { data: session } = useSession()
+  const { data: session, status: sessionStatus } = useSession()
   const { state, setOpenMobile } = useSidebar()
   const isCollapsed = state === "collapsed"
+  const workspaceId = session?.user?.workspaceId
 
   function handleNavClick() {
     setOpenMobile(false)
@@ -115,9 +116,13 @@ export function DashboardSidebar() {
   )
 
   const { data: subscription, isLoading: isSubLoading } = useSWR(
-    session?.user?.workspaceId ? "/api/subscriptions/current" : null,
+    workspaceId ? "/api/subscriptions/current" : null,
     (url) => fetch(url).then((res) => (res.ok ? res.json() : null))
   )
+  const isPlanLoading =
+    sessionStatus === "loading" ||
+    isSubLoading ||
+    (workspaceId && subscription === undefined)
 
   const mainNav = mainNavItems.map((item) => {
     if (item.title === "Orders") {
@@ -237,7 +242,7 @@ export function DashboardSidebar() {
       <SidebarFooter className="mt-auto border-t border-sidebar-border/60 px-2.5 py-2.5 group-data-[collapsible=icon]:px-1.5 group-data-[collapsible=icon]:py-2">
         <SidebarMenu>
           <SidebarMenuItem>
-            {isSubLoading ? (
+            {isPlanLoading ? (
               <div className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-sidebar-border/50 bg-sidebar-accent/10 px-3 group-data-[collapsible=icon]:size-11! group-data-[collapsible=icon]:p-0!">
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                 <span className="text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">

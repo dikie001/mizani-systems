@@ -10,6 +10,14 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
   Card,
   CardContent,
   CardDescription,
@@ -27,12 +35,23 @@ interface SubscriptionRequiredModalProps {
   selectedPlanName?: string
 }
 
+type PaymentSummary = {
+  headline?: string
+  detail?: string
+  amountLabel?: string
+}
+
 export function SubscriptionRequiredModal({
   isOpen,
   workspaceId,
   selectedPlanName,
 }: SubscriptionRequiredModalProps) {
   const [isLoading, setIsLoading] = useState<string | null>(null)
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false)
+  const [pendingPayment, setPendingPayment] = useState<{
+    authorizationUrl: string
+    summary: PaymentSummary | null
+  } | null>(null)
 
   const handleSelectPlan = async (planId: string) => {
     setIsLoading(planId)
@@ -49,18 +68,11 @@ export function SubscriptionRequiredModal({
       const data = await response.json()
 
       if (data.success && data.authorizationUrl) {
-        const summary = data.paymentSummary
-        if (summary?.headline || summary?.detail) {
-          const ok = window.confirm(
-            [summary.headline, summary.detail].filter(Boolean).join("\n\n")
-          )
-          if (!ok) {
-            setIsLoading(null)
-            return
-          }
-        }
-
-        window.location.href = data.authorizationUrl
+        setPendingPayment({
+          authorizationUrl: data.authorizationUrl,
+          summary: data.paymentSummary || null,
+        })
+        setIsConfirmOpen(true)
       } else if (data.success && !data.authorizationUrl) {
         // Free trial fallback (though normally they wouldn't see this modal for trial)
         window.location.reload()
@@ -184,6 +196,66 @@ export function SubscriptionRequiredModal({
           </div>
         </div>
       </AlertDialogContent>
+
+      <Dialog
+        open={isConfirmOpen}
+        onOpenChange={(open) => {
+          setIsConfirmOpen(open)
+          if (!open) {
+            setPendingPayment(null)
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-125">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">
+              Confirm Payment
+            </DialogTitle>
+            <DialogDescription>
+              Review the payment details before we send you to Paystack.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2 text-sm text-muted-foreground">
+            <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
+              <p className="text-sm font-medium text-foreground">
+                {pendingPayment?.summary?.headline || "Proceed to Paystack"}
+              </p>
+              <p className="mt-2 whitespace-pre-line">
+                {pendingPayment?.summary?.detail ||
+                  "You will be redirected to Paystack to complete the transaction."}
+              </p>
+              {pendingPayment?.summary?.amountLabel && (
+                <p className="mt-3 text-base font-semibold text-foreground">
+                  Amount due: {pendingPayment.summary.amountLabel}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsConfirmOpen(false)
+                setPendingPayment(null)
+                setIsLoading(null)
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (pendingPayment?.authorizationUrl) {
+                  window.location.href = pendingPayment.authorizationUrl
+                }
+              }}
+            >
+              Continue to Paystack
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AlertDialog>
   )
 }
