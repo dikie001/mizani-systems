@@ -88,7 +88,7 @@ export function SubscriptionRequiredModal({
   return (
     <AlertDialog open={isOpen}>
       <AlertDialogContent className="max-w-4xl overflow-hidden border-border/50 bg-background/95 p-0 backdrop-blur-xl">
-        <div className="absolute inset-0 -z-10 bg-gradient-to-br from-primary/5 via-background to-secondary/5" />
+        <div className="absolute inset-0 -z-10 bg-linear-to-br from-primary/5 via-background to-secondary/5" />
         <AlertDialogHeader className="px-8 pt-8 pb-4 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 shadow-inner ring-1 ring-primary/20">
             <CreditCard className="h-7 w-7 text-primary" />

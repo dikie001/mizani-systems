@@ -515,7 +515,7 @@ export default function BillingPage() {
 
       {/* Upgrade / Change Plan Dialog */}
       <Dialog open={isUpgradeOpen} onOpenChange={setIsUpgradeOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-125">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">
               Select a Subscription Plan
@@ -690,7 +690,7 @@ export default function BillingPage() {
 
       {/* Cancel Subscription Dialog */}
       <Dialog open={isCancelOpen} onOpenChange={setIsCancelOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-125">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 font-bold text-destructive">
               <AlertTriangle className="h-5 w-5" />
