@@ -680,7 +680,9 @@ export default function BillingPage() {
                             variant={
                               isCurrent ? "outline" : (plan.variant as any)
                             }
-                            disabled={isCurrent || upgradeLoadingPlanId !== null}
+                            disabled={
+                              isCurrent || upgradeLoadingPlanId !== null
+                            }
                             onClick={() =>
                               handleUpgrade(plan.id as "basic" | "pro")
                             }
@@ -744,8 +746,7 @@ export default function BillingPage() {
             </div>
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-4
-          ">
+          <DialogFooter className="gap-2 sm:gap-4">
             <Button
               variant="outline"
               disabled={isRedirectingToPaystack}
