@@ -11,17 +11,21 @@ export default function PopupCompletePage() {
     const callbackUrl = params.get("callbackUrl") || "/dashboard"
     const error = params.get("error")
 
-    if (window.opener && !window.opener.closed) {
-      window.opener.postMessage(
-        {
-          type: "google-auth:result",
-          callbackUrl,
-          error,
-        },
-        window.location.origin,
-      )
-      window.close()
-      return
+    if (window.opener) {
+      try {
+        window.opener.postMessage(
+          {
+            type: "google-auth:result",
+            callbackUrl,
+            error,
+          },
+          window.location.origin
+        )
+        window.close()
+        return
+      } catch {
+        // If cross-origin protections block opener access, fall back to redirect.
+      }
     }
 
     router.replace(callbackUrl)
@@ -30,7 +34,9 @@ export default function PopupCompletePage() {
 
   return (
     <main className="flex min-h-svh items-center justify-center bg-background px-6 text-center">
-      <p className="text-sm text-muted-foreground">Sign-in complete. You can close this window.</p>
+      <p className="text-sm text-muted-foreground">
+        Sign-in complete. You can close this window.
+      </p>
     </main>
   )
 }

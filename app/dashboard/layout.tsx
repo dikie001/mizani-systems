@@ -14,19 +14,26 @@ import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import prisma from "@/lib/prisma"
 
+function normalizeEmail(email?: string | null) {
+  return email?.replace(/"/g, "").trim().toLowerCase() ?? ""
+}
+
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   const session = await auth()
-  
+
   if (!session?.user?.email) {
     redirect("/auth")
   }
 
   const superAdminEmail = process.env.SUPER_ADMIN_EMAIL
-  if (superAdminEmail && session.user.email.toLowerCase() === superAdminEmail.toLowerCase()) {
+  if (
+    session.user.role === "super_admin" ||
+    normalizeEmail(session.user.email) === normalizeEmail(superAdminEmail)
+  ) {
     redirect("/super-admin")
   }
 
@@ -36,12 +43,15 @@ export default async function DashboardLayout({
     select: {
       currentWorkspaceId: true,
       memberships: {
-        take: 1
-      }
-    }
+        take: 1,
+      },
+    },
   })
 
-  if (!user?.currentWorkspaceId && (!user?.memberships || user.memberships.length === 0)) {
+  if (
+    !user?.currentWorkspaceId &&
+    (!user?.memberships || user.memberships.length === 0)
+  ) {
     redirect("/onboarding")
   }
 
@@ -51,18 +61,25 @@ export default async function DashboardLayout({
   if (user?.currentWorkspaceId) {
     workspace = await prisma.workspace.findUnique({
       where: { id: user.currentWorkspaceId },
-      include: { subscription: true, selectedPlan: true }
+      include: { subscription: true, selectedPlan: true },
     })
-    
+
     // If no subscription or status is not active/trial, prompt payment
-    if (workspace && (!workspace.subscription || (workspace.subscription.status !== "active" && workspace.subscription.status !== "trial"))) {
+    if (
+      workspace &&
+      (!workspace.subscription ||
+        (workspace.subscription.status !== "active" &&
+          workspace.subscription.status !== "trial"))
+    ) {
       requiresPayment = true
     }
   }
 
   return (
     <>
-      <DashboardShell requiresPayment={requiresPayment}>{children}</DashboardShell>
+      <DashboardShell requiresPayment={requiresPayment}>
+        {children}
+      </DashboardShell>
       <Suspense fallback={null}>
         <CreateWorkspaceModal />
       </Suspense>

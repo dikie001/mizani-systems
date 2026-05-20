@@ -78,7 +78,7 @@ function AuthContent() {
 
     return getAuthErrorMessage(error)
   })
-  const popupCheckRef = useRef<number | null>(null)
+  const popupResetTimeoutRef = useRef<number | null>(null)
 
   const planId = searchParams.get("plan")
   const selectedPlan = planId ? getPlanById(planId) : null
@@ -149,9 +149,9 @@ function AuthContent() {
         return
       }
 
-      if (popupCheckRef.current) {
-        window.clearInterval(popupCheckRef.current)
-        popupCheckRef.current = null
+      if (popupResetTimeoutRef.current) {
+        window.clearTimeout(popupResetTimeoutRef.current)
+        popupResetTimeoutRef.current = null
       }
 
       if (payload.error) {
@@ -176,8 +176,8 @@ function AuthContent() {
     window.addEventListener("message", handleMessage)
     return () => {
       window.removeEventListener("message", handleMessage)
-      if (popupCheckRef.current) {
-        window.clearInterval(popupCheckRef.current)
+      if (popupResetTimeoutRef.current) {
+        window.clearTimeout(popupResetTimeoutRef.current)
       }
     }
   }, [router])
@@ -214,18 +214,17 @@ function AuthContent() {
 
     popup.focus()
 
-    popupCheckRef.current = window.setInterval(() => {
-      if (!popup.closed) {
-        return
-      }
+    if (popupResetTimeoutRef.current) {
+      window.clearTimeout(popupResetTimeoutRef.current)
+    }
 
-      if (popupCheckRef.current) {
-        window.clearInterval(popupCheckRef.current)
-        popupCheckRef.current = null
-      }
-
-      setGoogleAuthState("idle")
-    }, 500)
+    // Fallback in case the popup is closed before posting back.
+    popupResetTimeoutRef.current = window.setTimeout(() => {
+      setGoogleAuthState((current) =>
+        current === "opening" ? "idle" : current
+      )
+      popupResetTimeoutRef.current = null
+    }, 60_000)
   }
 
   return (
@@ -244,7 +243,7 @@ function AuthContent() {
 
         <Card className="rounded-2xl border bg-card text-card-foreground shadow-sm">
           <CardHeader className="items-center gap-3 px-6 pt-6 text-center">
-            <div className="relative mb-1 h-12 w-12 flex items-center justify-center rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+            <div className="relative mb-1 flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl border border-border bg-card shadow-sm">
               {logoLoading && (
                 <LoaderCircle className="absolute h-5 w-5 animate-spin text-primary" />
               )}
@@ -296,13 +295,16 @@ function AuthContent() {
                 <Info className="h-4 w-4 text-destructive" />
                 <AlertDescription className="text-sm font-medium">
                   You have reached the global request limit. Please try again in{" "}
-                  <span className="font-mono font-bold">{formatTimeLeft(timeLeft)}</span>.
+                  <span className="font-mono font-bold">
+                    {formatTimeLeft(timeLeft)}
+                  </span>
+                  .
                   <br />
                   <a
                     href="https://errors.authjs.dev#autherror"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="underline text-xs text-muted-foreground hover:text-destructive transition-colors mt-1 inline-block"
+                    className="mt-1 inline-block text-xs text-muted-foreground underline transition-colors hover:text-destructive"
                   >
                     Read more at AuthJS
                   </a>
@@ -313,7 +315,10 @@ function AuthContent() {
             <Button
               className="h-11 w-full rounded-xl"
               onClick={handleGoogleSignIn}
-              disabled={googleAuthState !== "idle" || (timeLeft !== null && timeLeft > 0)}
+              disabled={
+                googleAuthState !== "idle" ||
+                (timeLeft !== null && timeLeft > 0)
+              }
             >
               {googleAuthState !== "idle" ? (
                 <LoaderCircle className="h-4 w-4 animate-spin" />

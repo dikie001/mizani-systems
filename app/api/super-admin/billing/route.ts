@@ -3,6 +3,10 @@ import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
 import { PLANS } from "@/lib/plans"
 
+function normalizeEmail(email?: string | null) {
+  return email?.replace(/"/g, "").trim().toLowerCase() ?? ""
+}
+
 export async function GET() {
   try {
     // Verify super admin access
@@ -12,10 +16,11 @@ export async function GET() {
     }
 
     const superAdminEmail = process.env.SUPER_ADMIN_EMAIL
-    if (
-      !superAdminEmail ||
-      session.user.email.toLowerCase() !==
-        superAdminEmail.replace(/"/g, "").toLowerCase()
+    if (session.user.role === "super_admin") {
+      // continue
+    } else if (
+      !normalizeEmail(superAdminEmail) ||
+      normalizeEmail(session.user.email) !== normalizeEmail(superAdminEmail)
     ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }

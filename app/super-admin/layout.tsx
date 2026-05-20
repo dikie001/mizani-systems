@@ -4,7 +4,10 @@ import { redirect } from "next/navigation"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { SuperAdminSidebar } from "@/components/super-admin-sidebar"
 import { SuperAdminHeader } from "@/components/super-admin-header"
-import { Suspense } from "react"
+
+function normalizeEmail(email?: string | null) {
+  return email?.replace(/"/g, "").trim().toLowerCase() ?? ""
+}
 
 export const metadata: Metadata = {
   title: "Super Admin Control Center | Mizani Systems",
@@ -24,10 +27,12 @@ export default async function SuperAdminLayout({
   }
 
   const superAdminEmail = process.env.SUPER_ADMIN_EMAIL
+  const isSuperAdminRole = session.user.role === "super_admin"
 
   if (
-    !superAdminEmail ||
-    session.user.email.toLowerCase() !== superAdminEmail.toLowerCase()
+    !isSuperAdminRole &&
+    (!normalizeEmail(superAdminEmail) ||
+      normalizeEmail(session.user.email) !== normalizeEmail(superAdminEmail))
   ) {
     redirect("/dashboard")
   }
@@ -42,14 +47,10 @@ export default async function SuperAdminLayout({
           } as React.CSSProperties
         }
       >
-        <Suspense fallback={null}>
-          <SuperAdminSidebar />
-        </Suspense>
+        <SuperAdminSidebar />
 
         <SidebarInset className="flex h-svh flex-col overflow-hidden">
-          <Suspense fallback={null}>
-            <SuperAdminHeader />
-          </Suspense>
+          <SuperAdminHeader />
           <main className="relative flex-1 overflow-auto bg-background p-4 text-foreground md:p-6">
             <div className="max-w-7.5xl mx-auto w-full">{children}</div>
           </main>
