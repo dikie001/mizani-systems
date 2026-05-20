@@ -65,7 +65,14 @@ type LeadsData = {
   contacts: ContactRequest[]
 }
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
+const fetcher = async (url: string) => {
+  const res = await fetch(url)
+  if (!res.ok) {
+    const errorMsg = await res.json().catch(() => ({})).then((data) => data.error || "An error occurred")
+    throw new Error(errorMsg)
+  }
+  return res.json()
+}
 
 export default function SuperAdminLeadsPage() {
   const { data, error, isLoading, mutate } = useSWR<LeadsData>(
