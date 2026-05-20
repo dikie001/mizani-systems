@@ -30,7 +30,10 @@ export default async function DashboardLayout({
   }
 
   const superAdminEmail = process.env.SUPER_ADMIN_EMAIL
-  if (session.user.role === "super_admin" || normalizeEmail(session.user.email) === normalizeEmail(superAdminEmail)) {
+  if (
+    session.user.role === "super_admin" ||
+    normalizeEmail(session.user.email) === normalizeEmail(superAdminEmail)
+  ) {
     redirect("/super-admin")
   }
 

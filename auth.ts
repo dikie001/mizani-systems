@@ -90,7 +90,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return true
     },
     async jwt({ token, user, trigger, session }) {
-      if (user?.email || (token.sub && !token.workspaceId)) {
+      // Refresh from DB:
+      //  - on fresh sign-in (user?.email present)
+      //  - on first token creation before workspaceId is populated
+      //  - when role isn't yet promoted to super_admin but email matches
+      const superAdminEmailRaw =
+        process.env.SUPER_ADMIN_EMAIL || "omondidickens255@gmail.com"
+      const superAdminEmailNorm = normalizeEmail(superAdminEmailRaw)
+      const tokenEmailNorm = normalizeEmail(token.email as string | undefined)
+      const emailMatchesSuperAdmin =
+        superAdminEmailNorm && tokenEmailNorm === superAdminEmailNorm
+
+      if (
+        user?.email ||
+        (token.sub && !token.workspaceId) ||
+        (token.sub && emailMatchesSuperAdmin && token.role !== "super_admin")
+      ) {
         const dbUser = await prisma.user.findUnique({
           where: token.sub
             ? { id: token.sub }
