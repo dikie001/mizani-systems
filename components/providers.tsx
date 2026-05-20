@@ -21,15 +21,17 @@ export function Providers({ children }: { children: React.ReactNode }) {
           const clone = response.clone()
           const data = await clone.json()
 
-          if (
-            (data.message && data.message.toLowerCase().includes("global request limit")) ||
-            (data.error && data.error.toLowerCase().includes("rate limit"))
-          ) {
+          const isGlobalLimit =
+            response.headers.get("X-RateLimit-Scope") === "global" ||
+            response.headers.get("x-ratelimit-scope") === "global" ||
+            (data.message && data.message.toLowerCase().includes("global request limit"))
+
+          if (isGlobalLimit) {
             if (!isRateLimitActive) {
               isRateLimitActive = true
 
               toast.error(
-                "You have reached the global request limit. Please try again in 1 hour",
+                "You have reached the global request limit. Please try again in 15 minutes.. Read more at https://errors.authjs.dev#autherror",
                 {
                   duration: 5000,
                   onDismiss: () => {

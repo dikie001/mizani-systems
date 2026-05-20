@@ -13,6 +13,19 @@ export default auth(async (request: NextRequest) => {
 
   const rateLimitResponse = await rateLimit(request)
   if (rateLimitResponse) {
+    if (rateLimitResponse.headers.get("X-RateLimit-Scope") === "global") {
+      const cookieNames = [
+        "authjs.session-token",
+        "__Secure-authjs.session-token",
+        "next-auth.session-token",
+        "__Secure-next-auth.session-token",
+        "authjs.callback-url",
+        "authjs.csrf-token",
+      ]
+      for (const name of cookieNames) {
+        rateLimitResponse.cookies.set(name, "", { maxAge: 0, path: "/" })
+      }
+    }
     return rateLimitResponse
   }
 

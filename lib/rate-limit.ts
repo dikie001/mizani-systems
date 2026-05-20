@@ -333,6 +333,7 @@ export async function rateLimit(
         "Retry-After": decision.retryAfterSeconds.toString(),
         "X-RateLimit-Limit": decision.limit.toString(),
         "X-RateLimit-Window": `${decision.windowMs}ms`,
+        "X-RateLimit-Scope": decision.scope,
       },
     }
   )
