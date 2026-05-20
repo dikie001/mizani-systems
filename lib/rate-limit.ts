@@ -2,6 +2,27 @@ import { NextRequest, NextResponse } from "next/server"
 
 type EndpointType = "auth" | "api" | "admin" | "payment" | "upload" | "search"
 
+type RequestLike = {
+  headers: {
+    get(name: string): string | null
+  }
+  nextUrl: {
+    pathname: string
+  }
+}
+
+export type RateLimitDecision =
+  | { allowed: true }
+  | {
+      allowed: false
+      scope: string
+      message: string
+      limit: number
+      windowMs: number
+      retryAfterSeconds: number
+      violations: number
+    }
+
 interface RateLimitEntry {
   count: number
   resetTime: number
@@ -198,11 +219,43 @@ function checkRateLimit(
   }
 }
 
-export async function rateLimit(
-  request: NextRequest
-): Promise<NextResponse | null> {
+function isServerActionRequest(request: RequestLike): boolean {
+  return Boolean(
+    request.headers.get("next-action") ||
+    request.headers.get("x-action") ||
+    request.headers.get("x-action-id")
+  )
+}
+
+function buildRateLimitDecision(
+  scope: string,
+  config: RateLimitConfig,
+  check: { allowed: boolean; resetTime: number; violations: number }
+): RateLimitDecision {
+  if (check.allowed) {
+    return { allowed: true }
+  }
+
+  const retryAfterMs = Math.max(0, check.resetTime - Date.now())
+  const retryAfterSeconds = Math.max(1, Math.ceil(retryAfterMs / 1000))
+
+  return {
+    allowed: false,
+    scope,
+    message:
+      scope === "global"
+        ? `You have reached the global request limit. Please try again in ${formatTime(retryAfterMs)}.`
+        : `Too many requests to this ${scope} area. Please try again in ${formatTime(retryAfterMs)}.`,
+    limit: config.maxRequests,
+    windowMs: config.windowMs,
+    retryAfterSeconds,
+    violations: check.violations,
+  }
+}
+
+export function evaluateRateLimit(request: RequestLike): RateLimitDecision {
   if (!isRateLimitingEnabled()) {
-    return null
+    return { allowed: true }
   }
 
   const pathname = request.nextUrl.pathname
@@ -217,75 +270,70 @@ export async function rateLimit(
     pathname.includes(".css") ||
     pathname.includes(".js")
   ) {
-    return null
+    return { allowed: true }
   }
 
-  const clientKey = getClientKey(request)
+  const clientKey = getClientKey(request as NextRequest)
 
   const globalConfig = getGlobalConfig()
-  const globalCheck = checkRateLimit("global", clientKey, globalConfig)
+  const globalDecision = buildRateLimitDecision(
+    "global",
+    globalConfig,
+    checkRateLimit("global", clientKey, globalConfig)
+  )
 
-  if (!globalCheck.allowed) {
-    const retryAfterMs = Math.max(0, globalCheck.resetTime - Date.now())
-    const retryAfterSeconds = Math.max(1, Math.ceil(retryAfterMs / 1000))
-
-    return NextResponse.json(
-      {
-        error: "Rate limit exceeded",
-        message: `You have reached the global request limit. Please try again in ${formatTime(retryAfterMs)}.`,
-        details: {
-          limit: globalConfig.maxRequests,
-          window: formatTime(globalConfig.windowMs),
-          retryAfter: retryAfterSeconds,
-          scope: "global",
-          violations: globalCheck.violations,
-        },
-      },
-      {
-        status: 429,
-        headers: {
-          "Retry-After": retryAfterSeconds.toString(),
-          "X-RateLimit-Limit": globalConfig.maxRequests.toString(),
-          "X-RateLimit-Window": `${globalConfig.windowMs}ms`,
-        },
-      }
-    )
+  if (!globalDecision.allowed) {
+    return globalDecision
   }
 
   if (!pathname.startsWith("/api/")) {
-    return null
+    return { allowed: true }
   }
 
   const endpointType = getEndpointType(pathname)
   const endpointConfig = getConfig(endpointType)
-  const endpointCheck = checkRateLimit(endpointType, clientKey, endpointConfig)
+  return buildRateLimitDecision(
+    endpointType,
+    endpointConfig,
+    checkRateLimit(endpointType, clientKey, endpointConfig)
+  )
+}
 
-  if (!endpointCheck.allowed) {
-    const retryAfterMs = Math.max(0, endpointCheck.resetTime - Date.now())
-    const retryAfterSeconds = Math.max(1, Math.ceil(retryAfterMs / 1000))
-
-    return NextResponse.json(
-      {
-        error: "Rate limit exceeded",
-        message: `Too many requests to this ${endpointType} area. Please try again in ${formatTime(retryAfterMs)}.`,
-        details: {
-          limit: endpointConfig.maxRequests,
-          window: formatTime(endpointConfig.windowMs),
-          retryAfter: retryAfterSeconds,
-          scope: endpointType,
-          violations: endpointCheck.violations,
-        },
-      },
-      {
-        status: 429,
-        headers: {
-          "Retry-After": retryAfterSeconds.toString(),
-          "X-RateLimit-Limit": endpointConfig.maxRequests.toString(),
-          "X-RateLimit-Window": `${endpointConfig.windowMs}ms`,
-        },
-      }
-    )
+export async function rateLimit(
+  request: NextRequest
+): Promise<NextResponse | null> {
+  if (
+    isServerActionRequest(request) &&
+    !request.nextUrl.pathname.startsWith("/api/")
+  ) {
+    return null
   }
 
-  return null
+  const decision = evaluateRateLimit(request)
+
+  if (decision.allowed) {
+    return null
+  }
+
+  return NextResponse.json(
+    {
+      error: "Rate limit exceeded",
+      message: decision.message,
+      details: {
+        limit: decision.limit,
+        window: formatTime(decision.windowMs),
+        retryAfter: decision.retryAfterSeconds,
+        scope: decision.scope,
+        violations: decision.violations,
+      },
+    },
+    {
+      status: 429,
+      headers: {
+        "Retry-After": decision.retryAfterSeconds.toString(),
+        "X-RateLimit-Limit": decision.limit.toString(),
+        "X-RateLimit-Window": `${decision.windowMs}ms`,
+      },
+    }
+  )
 }

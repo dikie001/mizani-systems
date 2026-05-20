@@ -3,11 +3,13 @@
 import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
+import { headers } from "next/headers"
 import {
   getHighestPlanName,
   getPlanById,
   getPlanEntitlements,
 } from "@/lib/plans"
+import { evaluateRateLimit } from "@/lib/rate-limit"
 
 export async function getWorkspaces() {
   const session = await auth()
@@ -96,6 +98,23 @@ export async function createWorkspace(data: {
   goals: string[]
   planId?: string
 }) {
+  const requestHeaders = (await headers()) as {
+    get(name: string): string | null
+  }
+  const rateLimitDecision = evaluateRateLimit({
+    headers: requestHeaders,
+    nextUrl: {
+      pathname: "/dashboard/billing",
+    },
+  })
+
+  if (!rateLimitDecision.allowed) {
+    return {
+      success: false,
+      error: rateLimitDecision.message,
+    }
+  }
+
   const session = await auth()
   if (!session?.user?.id) {
     throw new Error("Unauthorized")
@@ -291,6 +310,23 @@ export async function updateWorkspace(
   workspaceId: string,
   data: { name?: string; businessType?: string; currency?: string }
 ) {
+  const requestHeaders = (await headers()) as {
+    get(name: string): string | null
+  }
+  const rateLimitDecision = evaluateRateLimit({
+    headers: requestHeaders,
+    nextUrl: {
+      pathname: "/dashboard/settings",
+    },
+  })
+
+  if (!rateLimitDecision.allowed) {
+    return {
+      success: false,
+      error: rateLimitDecision.message,
+    }
+  }
+
   const session = await auth()
   if (!session?.user?.id) {
     throw new Error("Unauthorized")
