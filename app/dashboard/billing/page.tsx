@@ -91,7 +91,11 @@ export default function BillingPage() {
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false)
   const [isCancelOpen, setIsCancelOpen] = useState(false)
   const [isPaymentConfirmOpen, setIsPaymentConfirmOpen] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [upgradeLoadingPlanId, setUpgradeLoadingPlanId] = useState<
+    "basic" | "pro" | null
+  >(null)
+  const [isCancelling, setIsCancelling] = useState(false)
+  const [isRedirectingToPaystack, setIsRedirectingToPaystack] = useState(false)
   const [expandedPlanId, setExpandedPlanId] = useState<string | null>(null)
   const [pendingPayment, setPendingPayment] = useState<{
     authorizationUrl: string
@@ -169,13 +173,7 @@ export default function BillingPage() {
   }, [isUpgradeOpen, subscription])
 
   const handleUpgrade = async (planId: "basic" | "pro") => {
-    setIsSubmitting(true)
-    const currentPlanName = subscription?.plan?.name || ""
-    const isTrial = currentPlanName === "trial" || currentPlanName === "free"
-    const isInactive =
-      !subscription ||
-      subscription.status === "cancelled" ||
-      subscription.status === "expired"
+    setUpgradeLoadingPlanId(planId)
 
     try {
       const workspaceId = (session?.user as any)?.workspaceId
@@ -220,12 +218,12 @@ export default function BillingPage() {
       console.error(err)
       toast.error("An unexpected error occurred")
     } finally {
-      setIsSubmitting(false)
+      setUpgradeLoadingPlanId(null)
     }
   }
 
   const handleCancel = async () => {
-    setIsSubmitting(true)
+    setIsCancelling(true)
     try {
       const res = await cancelSubscription()
       if (res.success) {
@@ -239,7 +237,7 @@ export default function BillingPage() {
     } catch (err) {
       toast.error("An unexpected error occurred")
     } finally {
-      setIsSubmitting(false)
+      setIsCancelling(false)
     }
   }
 
@@ -682,13 +680,16 @@ export default function BillingPage() {
                             variant={
                               isCurrent ? "outline" : (plan.variant as any)
                             }
-                            disabled={isCurrent || isSubmitting}
+                            disabled={isCurrent || upgradeLoadingPlanId !== null}
                             onClick={() =>
                               handleUpgrade(plan.id as "basic" | "pro")
                             }
                           >
-                            {isSubmitting ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
+                            {upgradeLoadingPlanId === plan.id ? (
+                              <span className="inline-flex items-center gap-2">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Processing
+                              </span>
                             ) : isCurrent ? (
                               "Current Plan"
                             ) : (
@@ -712,6 +713,7 @@ export default function BillingPage() {
           setIsPaymentConfirmOpen(open)
           if (!open) {
             setPendingPayment(null)
+            setIsRedirectingToPaystack(false)
           }
         }}
       >
@@ -746,21 +748,32 @@ export default function BillingPage() {
           ">
             <Button
               variant="outline"
+              disabled={isRedirectingToPaystack}
               onClick={() => {
                 setIsPaymentConfirmOpen(false)
                 setPendingPayment(null)
+                setIsRedirectingToPaystack(false)
               }}
             >
               Cancel
             </Button>
             <Button
+              disabled={isRedirectingToPaystack}
               onClick={() => {
-                if (pendingPayment?.authorizationUrl) {
-                  window.location.href = pendingPayment.authorizationUrl
-                }
+                if (!pendingPayment?.authorizationUrl) return
+
+                setIsRedirectingToPaystack(true)
+                window.location.href = pendingPayment.authorizationUrl
               }}
             >
-              Continue to Paystack
+              {isRedirectingToPaystack ? (
+                <span className="inline-flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Redirecting
+                </span>
+              ) : (
+                "Continue to Paystack"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -792,17 +805,17 @@ export default function BillingPage() {
           <DialogFooter className="mt-4 gap-2 sm:gap-0">
             <Button
               variant="outline"
-              disabled={isSubmitting}
+              disabled={isCancelling}
               onClick={() => setIsCancelOpen(false)}
             >
               No, keep active
             </Button>
             <Button
               variant="destructive"
-              disabled={isSubmitting}
+              disabled={isCancelling}
               onClick={handleCancel}
             >
-              {isSubmitting ? (
+              {isCancelling ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Cancelling...
