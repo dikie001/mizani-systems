@@ -6,7 +6,11 @@ import { rateLimit } from "@/lib/rate-limit"
 const { auth } = NextAuth(authConfig)
 
 export default auth(async (request: NextRequest) => {
-  // Apply rate limiting
+  // Only enforce proxy rate limits for API routes; page requests should render normally.
+  if (!request.nextUrl.pathname.startsWith("/api/")) {
+    return NextResponse.next()
+  }
+
   const rateLimitResponse = await rateLimit(request)
   if (rateLimitResponse) {
     return rateLimitResponse
