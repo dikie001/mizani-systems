@@ -37,15 +37,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
                   duration: 5000,
                   onDismiss: () => {
                     isRateLimitActive = false
+                    window.location.href = `/auth?error=RateLimitExceeded&retryAfter=${retryAfter}`
                   },
                   onAutoClose: () => {
                     isRateLimitActive = false
+                    window.location.href = `/auth?error=RateLimitExceeded&retryAfter=${retryAfter}`
                   },
                 }
               )
-
-              // Hard redirect immediately to log out and show the timer
-              window.location.href = `/auth?error=RateLimitExceeded&retryAfter=${retryAfter}`
             }
           }
         } catch (e) {
