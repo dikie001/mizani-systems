@@ -742,7 +742,8 @@ export default function BillingPage() {
             </div>
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="gap-2 sm:gap-4
+          ">
             <Button
               variant="outline"
               onClick={() => {
