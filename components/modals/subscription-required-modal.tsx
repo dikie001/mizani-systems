@@ -49,6 +49,17 @@ export function SubscriptionRequiredModal({
       const data = await response.json()
 
       if (data.success && data.authorizationUrl) {
+        if (data.topUpAmount) {
+          const amountLabel = formatKES(data.topUpAmount)
+          const ok = window.confirm(
+            `You will be charged ${amountLabel} now — this is the difference between your current plan and the selected plan. Proceed to payment?`
+          )
+          if (!ok) {
+            setIsLoading(null)
+            return
+          }
+        }
+
         window.location.href = data.authorizationUrl
       } else if (data.success && !data.authorizationUrl) {
         // Free trial fallback (though normally they wouldn't see this modal for trial)

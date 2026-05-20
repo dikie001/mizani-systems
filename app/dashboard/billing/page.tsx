@@ -180,8 +180,19 @@ export default function BillingPage() {
         return
       }
 
-      // If API returned an authorization URL, redirect user to Paystack checkout
+      // If API returned an authorization URL, confirm with user and redirect to Paystack
       if (data.authorizationUrl) {
+        if (data.topUpAmount) {
+          const amountLabel = formatKES(data.topUpAmount)
+          const ok = window.confirm(
+            `You will be charged ${amountLabel} now — this is the difference between your current plan and the selected plan. Proceed to payment?`
+          )
+          if (!ok) {
+            setIsSubmitting(false)
+            return
+          }
+        }
+
         window.location.href = data.authorizationUrl
         return
       }

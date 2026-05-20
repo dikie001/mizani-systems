@@ -213,6 +213,17 @@ export default function OnboardingClient({
           }
 
           if (data.authorizationUrl) {
+            if (data.topUpAmount) {
+              const amountLabel = formatKES(data.topUpAmount)
+              const ok = window.confirm(
+                `You will be charged ${amountLabel} now — this is the difference between your selected plan and any existing paid plan. Proceed to payment?`
+              )
+              if (!ok) {
+                setIsSubmitting(false)
+                return
+              }
+            }
+
             toast.success("Redirecting to Paystack...")
             window.location.href = data.authorizationUrl
           } else {
@@ -266,6 +277,17 @@ export default function OnboardingClient({
       }
 
       if (data.authorizationUrl) {
+        if (data.topUpAmount) {
+          const amountLabel = formatKES(data.topUpAmount)
+          const ok = window.confirm(
+            `You will be charged ${amountLabel} now — this is the difference between your selected plan and any existing paid plan. Proceed to payment?`
+          )
+          if (!ok) {
+            setIsSubmitting(false)
+            return
+          }
+        }
+
         toast.success("Redirecting to Paystack...")
         window.location.href = data.authorizationUrl
       } else {
