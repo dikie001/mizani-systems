@@ -1,214 +1,224 @@
 import { NextRequest, NextResponse } from "next/server"
 
-interface RateLimitConfig {
-  windowMs: number // Time window in milliseconds
-  maxRequests: number // Maximum requests per window
-  keyPrefix: string // Prefix for cache key
+interface RateLimitEntry {
+  count: number
+  resetTime: number
 }
 
-// In-memory store for rate limiting
-const rateLimitStore = new Map<string, { count: number; resetTime: number }[]>()
+// Store for GLOBAL rate limiting (per IP, across all endpoints)
+const globalStore = new Map<string, RateLimitEntry>()
 
-// Clean up old entries periodically
-const cleanupInterval = setInterval(() => {
+// Store for endpoint-specific rate limiting (optional, stricter limits)
+const endpointStore = new Map<string, RateLimitEntry>()
+
+// Cleanup old entries periodically
+setInterval(() => {
   const now = Date.now()
-  for (const [key, entries] of rateLimitStore.entries()) {
-    const filtered = entries.filter((entry) => entry.resetTime > now)
-    if (filtered.length === 0) {
-      rateLimitStore.delete(key)
-    } else {
-      rateLimitStore.set(key, filtered)
+  
+  // Clean global store
+  for (const [key, entry] of globalStore.entries()) {
+    if (entry.resetTime < now) {
+      globalStore.delete(key)
     }
   }
-}, 60000) // Clean up every minute
-
-// Cleanup on process exit
-if (typeof process !== "undefined") {
-  process.on("exit", () => clearInterval(cleanupInterval))
-}
-
-/**
- * Check if a request exceeds rate limit
- * @param key - Unique identifier for rate limiting (e.g., IP, user ID)
- * @param config - Rate limit configuration
- * @returns true if request is allowed, false if rate limited
- */
-function isAllowed(key: string, config: RateLimitConfig): boolean {
-  const now = Date.now()
-  const storeKey = `${config.keyPrefix}:${key}`
-
-  let entries = rateLimitStore.get(storeKey) || []
-
-  // Remove expired entries
-  entries = entries.filter((entry) => entry.resetTime > now)
-
-  // Check if we've exceeded the limit
-  if (entries.length >= config.maxRequests) {
-    rateLimitStore.set(storeKey, entries)
-    return false
+  
+  // Clean endpoint store
+  for (const [key, entry] of endpointStore.entries()) {
+    if (entry.resetTime < now) {
+      endpointStore.delete(key)
+    }
   }
-
-  // Add new entry
-  entries.push({
-    count: 1,
-    resetTime: now + config.windowMs,
-  })
-
-  rateLimitStore.set(storeKey, entries)
-  return true
-}
+}, 60000)
 
 /**
- * Format milliseconds to human-readable time string
+ * Get client IP address from request
  */
-function formatDuration(ms: number): string {
-  const seconds = Math.ceil(ms / 1000)
-  if (seconds < 60) return `${seconds} second${seconds !== 1 ? "s" : ""}`
-  const minutes = Math.ceil(seconds / 60)
-  if (minutes < 60) return `${minutes} minute${minutes !== 1 ? "s" : ""}`
-  const hours = Math.ceil(minutes / 60)
-  return `${hours} hour${hours !== 1 ? "s" : ""}`
-}
-
-/**
- * Get endpoint name for user-friendly messages
- */
-function getEndpointName(keyPrefix: string): string {
-  const endpointMap: { [key: string]: string } = {
-    auth_login: "Login",
-    auth_signup: "Sign Up",
-    api_products: "Products API",
-    api_orders: "Orders API",
-    api_inventory: "Inventory API",
-    api_alerts: "Alerts API",
-    api_dashboard: "Dashboard API",
-    api_upload: "File Upload",
-    api_payments: "Payments API",
-    api_reports: "Report Generation",
-  }
-
-  const normalizedKey = keyPrefix.toLowerCase().replace(/\//g, "_")
-  return endpointMap[normalizedKey] || keyPrefix
-}
-
-/**
- * Get the client identifier (IP address or user ID)
- */
-function getClientKey(
-  request: NextRequest,
-  useUserIdIfAvailable = false
-): string {
-  // Try to get user ID from request headers (set by middleware or auth)
-  if (useUserIdIfAvailable) {
-    const userId = request.headers.get("x-user-id")
-    if (userId) return userId
-  }
-
-  // Fall back to IP address
+function getClientIP(request: NextRequest): string {
   return (
-    request.headers.get("x-forwarded-for")?.split(",")[0] ||
+    request.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
     request.headers.get("x-real-ip") ||
     "unknown"
   )
 }
 
 /**
- * Create a rate limit middleware for API routes
+ * Get global rate limit config from environment
  */
-export function createRateLimitMiddleware(
-  config: Partial<RateLimitConfig> = {}
-) {
-  const finalConfig: RateLimitConfig = {
-    windowMs: config.windowMs || 15 * 60 * 1000, // 15 minutes default
-    maxRequests: config.maxRequests || 100,
-    keyPrefix: config.keyPrefix || "api",
-  }
-
-  return async (
-    request: NextRequest,
-    useUserIdIfAvailable = false
-  ): Promise<{ allowed: boolean; response?: NextResponse }> => {
-    const key = getClientKey(request, useUserIdIfAvailable)
-    const allowed = isAllowed(key, finalConfig)
-
-    if (!allowed) {
-      const endpoint = getEndpointName(finalConfig.keyPrefix)
-      const duration = formatDuration(finalConfig.windowMs)
-      const retryAfterSeconds = Math.ceil(finalConfig.windowMs / 1000)
-
-      return {
-        allowed: false,
-        response: NextResponse.json(
-          {
-            status: "rate_limit_exceeded",
-            error: "Too many requests",
-            message: `You've exceeded the rate limit for ${endpoint}. Please wait before trying again.`,
-            details: {
-              limit: `${finalConfig.maxRequests} requests`,
-              window: duration,
-              nextAvailableIn: formatDuration(finalConfig.windowMs),
-              retryAfterSeconds: retryAfterSeconds,
-            },
-            support:
-              "If you believe this is an error, please contact support or upgrade your plan.",
-          },
-          {
-            status: 429,
-            headers: {
-              "Retry-After": retryAfterSeconds.toString(),
-              "X-RateLimit-Limit": finalConfig.maxRequests.toString(),
-              "X-RateLimit-Window": `${finalConfig.windowMs}ms`,
-            },
-          }
-        ),
-      }
-    }
-
-    return { allowed: true }
-  }
+function getGlobalConfig(): { windowMs: number; maxRequests: number } {
+  const windowMs = parseInt(process.env.RATE_LIMIT_WINDOW_MS || "900000")
+  const maxRequests = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "100")
+  return { windowMs, maxRequests }
 }
 
 /**
- * Get rate limit config from environment variables
+ * Get endpoint-specific rate limit config (if stricter than global)
  */
-export function getRateLimitConfig(endpoint?: string): RateLimitConfig {
-  const defaultWindowMs = parseFloat(
-    process.env.RATE_LIMIT_WINDOW_MS || (15 * 60 * 1000).toString()
-  )
-  const defaultMaxRequests = parseInt(
-    process.env.RATE_LIMIT_MAX_REQUESTS || "100",
-    10
-  )
+function getEndpointConfig(endpoint: string): { windowMs: number; maxRequests: number } | null {
+  const envKey = endpoint
+    .toUpperCase()
+    .replace(/\//g, "_")
+    .replace(/[^A-Z0-9_]/g, "")
+  
+  const windowMs = process.env[`RATE_LIMIT_${envKey}_WINDOW_MS`]
+  const maxRequests = process.env[`RATE_LIMIT_${envKey}_MAX_REQUESTS`]
 
-  // If endpoint-specific config exists, use it
-  if (endpoint) {
-    const envKey = endpoint.toUpperCase().replace(/\//g, "_")
-    const windowMs = parseFloat(
-      process.env[`RATE_LIMIT_${envKey}_WINDOW_MS`] ||
-        defaultWindowMs.toString()
-    )
-    const maxRequests = parseInt(
-      process.env[`RATE_LIMIT_${envKey}_MAX_REQUESTS`] ||
-        defaultMaxRequests.toString(),
-      10
-    )
-
+  // Only return if both are defined (endpoint has custom limits)
+  if (windowMs && maxRequests) {
     return {
-      windowMs,
-      maxRequests,
-      keyPrefix: endpoint,
+      windowMs: parseInt(windowMs),
+      maxRequests: parseInt(maxRequests),
     }
   }
-
-  return {
-    windowMs: defaultWindowMs,
-    maxRequests: defaultMaxRequests,
-    keyPrefix: "api",
-  }
+  
+  return null
 }
 
 /**
- * Check if rate limiting is enabled
+ * Check global rate limit (per IP, across all endpoints)
+ */
+function checkGlobalRateLimit(
+  ip: string,
+  config: { windowMs: number; maxRequests: number }
+): { allowed: boolean; resetTime: number } {
+  const now = Date.now()
+  const entry = globalStore.get(ip)
+
+  // New or expired entry
+  if (!entry || entry.resetTime < now) {
+    globalStore.set(ip, { count: 1, resetTime: now + config.windowMs })
+    return { allowed: true, resetTime: 0 }
+  }
+
+  // Increment count
+  if (entry.count < config.maxRequests) {
+    entry.count++
+    return { allowed: true, resetTime: 0 }
+  }
+
+  // Rate limited
+  return { allowed: false, resetTime: entry.resetTime }
+}
+
+/**
+ * Check endpoint-specific rate limit (if configured)
+ */
+function checkEndpointRateLimit(
+  ip: string,
+  endpoint: string,
+  config: { windowMs: number; maxRequests: number }
+): { allowed: boolean; resetTime: number } {
+  const now = Date.now()
+  const storeKey = `${endpoint}:${ip}`
+  const entry = endpointStore.get(storeKey)
+
+  // New or expired entry
+  if (!entry || entry.resetTime < now) {
+    endpointStore.set(storeKey, { count: 1, resetTime: now + config.windowMs })
+    return { allowed: true, resetTime: 0 }
+  }
+
+  // Increment count
+  if (entry.count < config.maxRequests) {
+    entry.count++
+    return { allowed: true, resetTime: 0 }
+  }
+
+  // Rate limited
+  return { allowed: false, resetTime: entry.resetTime }
+}
+
+/**
+ * Format milliseconds to readable duration
+ */
+function formatTime(ms: number): string {
+  const seconds = Math.ceil(ms / 1000)
+  if (seconds < 60) return `${seconds} second${seconds !== 1 ? "s" : ""}`
+  const minutes = Math.ceil(seconds / 60)
+  if (minutes < 60) return `${minutes} minute${minutes !== 1 ? "s" : ""}`
+  return `${Math.ceil(minutes / 60)} hour${Math.ceil(minutes / 60) !== 1 ? "s" : ""}`
+}
+
+/**
+ * System-wide rate limit middleware
+ * Checks both global and endpoint-specific limits
+ */
+export async function rateLimit(
+  request: NextRequest
+): Promise<NextResponse | null> {
+  if (process.env.RATE_LIMITING_ENABLED === "false") {
+    return null
+  }
+
+  const pathname = request.nextUrl.pathname
+
+  // Skip non-API routes
+  if (!pathname.startsWith("/api/")) {
+    return null
+  }
+
+  const ip = getClientIP(request)
+  const globalConfig = getGlobalConfig()
+
+  // Check GLOBAL rate limit first (per IP, across all endpoints)
+  const globalCheck = checkGlobalRateLimit(ip, globalConfig)
+  
+  if (!globalCheck.allowed) {
+    const retryAfterMs = globalCheck.resetTime - Date.now()
+    const retryAfterSeconds = Math.max(1, Math.ceil(retryAfterMs / 1000))
+
+    return NextResponse.json(
+      {
+        error: "Rate limit exceeded",
+        message: `Too many requests from your device. Please try again in ${formatTime(retryAfterMs)}.`,
+        details: {
+          limit: `${globalConfig.maxRequests} requests per ${formatTime(globalConfig.windowMs)}`,
+          retryAfter: retryAfterSeconds,
+          type: "global",
+        },
+      },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": retryAfterSeconds.toString(),
+        },
+      }
+    )
+  }
+
+  // Check ENDPOINT-SPECIFIC rate limit (if configured)
+  const endpointConfig = getEndpointConfig(pathname)
+  if (endpointConfig) {
+    const endpointCheck = checkEndpointRateLimit(ip, pathname, endpointConfig)
+    
+    if (!endpointCheck.allowed) {
+      const retryAfterMs = endpointCheck.resetTime - Date.now()
+      const retryAfterSeconds = Math.max(1, Math.ceil(retryAfterMs / 1000))
+
+      return NextResponse.json(
+        {
+          error: "Rate limit exceeded",
+          message: `Too many requests to this endpoint. Please try again in ${formatTime(retryAfterMs)}.`,
+          details: {
+            limit: `${endpointConfig.maxRequests} requests per ${formatTime(endpointConfig.windowMs)}`,
+            retryAfter: retryAfterSeconds,
+            type: "endpoint",
+          },
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": retryAfterSeconds.toString(),
+          },
+        }
+      )
+    }
+  }
+
+  return null
+}
+
+/**
+ * Exported for compatibility
  */
 export function isRateLimitingEnabled(): boolean {
   return process.env.RATE_LIMITING_ENABLED !== "false"
