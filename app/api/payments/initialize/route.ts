@@ -2,7 +2,61 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
 import { paystack } from "@/lib/paystack"
-import { getPlanById } from "@/lib/plans"
+import { formatKES, getPlanById } from "@/lib/plans"
+
+function buildPaymentSummary(params: {
+  currentPlanDisplayName: string
+  currentPrice: number
+  targetPlanDisplayName: string
+  targetPrice: number
+}) {
+  const {
+    currentPlanDisplayName,
+    currentPrice,
+    targetPlanDisplayName,
+    targetPrice,
+  } = params
+
+  if (currentPrice === 0 && targetPrice > 0) {
+    return {
+      action: "checkout" as const,
+      amount: targetPrice,
+      amountLabel: formatKES(targetPrice),
+      headline: `You're being taken to Paystack to finish your ${targetPlanDisplayName} subscription.`,
+      detail: `This is your first payment for the ${targetPlanDisplayName} plan because your current plan is ${currentPlanDisplayName}.`,
+    }
+  }
+
+  if (targetPrice > currentPrice) {
+    const topUpAmount = targetPrice - currentPrice
+    return {
+      action: "upgrade" as const,
+      amount: topUpAmount,
+      amountLabel: formatKES(topUpAmount),
+      headline: `You are upgrading from ${currentPlanDisplayName} to ${targetPlanDisplayName}.`,
+      detail: `You need to pay an additional ${formatKES(topUpAmount)} now. That amount is the difference between ${formatKES(currentPrice)} and ${formatKES(targetPrice)}.`,
+    }
+  }
+
+  if (targetPrice < currentPrice) {
+    const refundAmount = currentPrice - targetPrice
+    return {
+      action: "downgrade" as const,
+      amount: refundAmount,
+      amountLabel: formatKES(refundAmount),
+      headline: `You are downgrading from ${currentPlanDisplayName} to ${targetPlanDisplayName}.`,
+      detail: `Your estimated refund is ${formatKES(refundAmount)}. The price difference is the gap between ${formatKES(currentPrice)} and ${formatKES(targetPrice)}.`,
+    }
+  }
+
+  return {
+    action: "no_change" as const,
+    amount: 0,
+    amountLabel: formatKES(0),
+    headline: `You are staying on ${targetPlanDisplayName}.`,
+    detail: `No payment or refund is required because both plans cost ${formatKES(targetPrice)}.`,
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -137,19 +191,24 @@ export async function POST(request: NextRequest) {
       data: { selectedPlanId: dbPlan.id },
     })
 
-    // Determine top-up amount if upgrading from an existing paid plan
+    const currentSubscription = workspace.subscription
     const currentMonthlyPrice =
-      workspace?.subscription?.plan?.monthlyPrice ??
+      currentSubscription?.plan?.monthlyPrice ??
       workspace?.selectedPlan?.monthlyPrice ??
       0
+    const currentPlanDisplayName =
+      currentSubscription?.plan?.displayName ??
+      workspace?.selectedPlan?.displayName ??
+      "Free Trial"
+    const paymentSummary = buildPaymentSummary({
+      currentPlanDisplayName,
+      currentPrice: currentMonthlyPrice,
+      targetPlanDisplayName: staticPlan.displayName,
+      targetPrice: staticPlan.monthlyPrice,
+    })
 
-    const topUpAmount = Math.max(
-      0,
-      staticPlan.monthlyPrice - currentMonthlyPrice
-    )
-
-    // If no top-up is required (downgrade or same price), apply plan immediately
-    if (topUpAmount === 0) {
+    // If no payment is required, apply plan immediately.
+    if (paymentSummary.action === "downgrade" || paymentSummary.action === "no_change") {
       // Create or update subscription immediately without charging
       const existingSub = await prisma.subscription.findUnique({
         where: { workspaceId },
@@ -197,13 +256,14 @@ export async function POST(request: NextRequest) {
         success: true,
         message: "Plan updated — no payment required",
         subscription,
+        paymentSummary,
       })
     }
 
-    // Initialize payment with Paystack for the top-up amount
+    // Initialize payment with Paystack for the amount due now
     const reference = `${workspaceId.slice(0, 8)}-${Date.now()}`
     // Paystack amounts are in the smallest currency unit (kobo/cents)
-    const amountInSmallestUnit = Math.round(topUpAmount * 100)
+    const amountInSmallestUnit = Math.round(paymentSummary.amount * 100)
 
     const callbackUrl = `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/payments/success`
 
@@ -216,8 +276,11 @@ export async function POST(request: NextRequest) {
         workspaceId,
         planId: staticPlan.id,
         planName: staticPlan.displayName,
-        topUp: true,
-        topUpAmount,
+        topUp: paymentSummary.action === "upgrade",
+        topUpAmount:
+          paymentSummary.action === "upgrade" ? paymentSummary.amount : 0,
+        checkoutAmount:
+          paymentSummary.action === "checkout" ? paymentSummary.amount : 0,
         custom_fields: [
           {
             display_name: "Workspace",
@@ -244,7 +307,7 @@ export async function POST(request: NextRequest) {
     const payment = await prisma.payment.create({
       data: {
         workspaceId,
-        amount: topUpAmount,
+        amount: paymentSummary.amount,
         status: "pending",
         paystackReference: reference,
         paystackAccessCode: paystackResponse.data?.access_code,
@@ -257,7 +320,7 @@ export async function POST(request: NextRequest) {
       accessCode: paystackResponse.data?.access_code,
       reference,
       paymentId: payment.id,
-      topUpAmount,
+      paymentSummary,
     })
   } catch (error) {
     console.error("Payment initialization error:", error)

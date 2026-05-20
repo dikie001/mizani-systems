@@ -155,16 +155,6 @@ export default function BillingPage() {
       subscription.status === "cancelled" ||
       subscription.status === "expired"
 
-    let verb = "upgraded"
-    if (
-      !isInactive &&
-      !isTrial &&
-      currentPlanName === "pro" &&
-      planId === "basic"
-    ) {
-      verb = "downgraded"
-    }
-
     try {
       const workspaceId = (session?.user as any)?.workspaceId
       const response = await fetch("/api/payments/initialize", {
@@ -182,25 +172,24 @@ export default function BillingPage() {
 
       // If API returned an authorization URL, confirm with user and redirect to Paystack
       if (data.authorizationUrl) {
-        if (data.topUpAmount) {
-          const amountLabel = formatKES(data.topUpAmount)
+        const summary = data.paymentSummary
+        if (summary?.headline || summary?.detail) {
           const ok = window.confirm(
-            `You will be charged ${amountLabel} now — this is the difference between your current plan and the selected plan. Proceed to payment?`
+            [summary.headline, summary.detail].filter(Boolean).join("\n\n")
           )
-          if (!ok) {
-            setIsSubmitting(false)
-            return
-          }
+          if (!ok) return
         }
 
         window.location.href = data.authorizationUrl
         return
       }
 
-      // Otherwise, the API applied the plan immediately (no top-up required)
+      // Otherwise, the API applied the plan immediately or resolved the plan change without checkout.
       if (data.success) {
+        const summary = data.paymentSummary
         toast.success(
-          `Successfully ${verb} to ${planId === "pro" ? "Professional" : "Basic"} plan!`
+          summary?.detail ||
+            `Successfully updated to ${planId === "pro" ? "Professional" : "Basic"} plan!`
         )
         setIsUpgradeOpen(false)
         await fetchBillingData()

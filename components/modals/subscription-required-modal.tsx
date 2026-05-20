@@ -49,10 +49,10 @@ export function SubscriptionRequiredModal({
       const data = await response.json()
 
       if (data.success && data.authorizationUrl) {
-        if (data.topUpAmount) {
-          const amountLabel = formatKES(data.topUpAmount)
+        const summary = data.paymentSummary
+        if (summary?.headline || summary?.detail) {
           const ok = window.confirm(
-            `You will be charged ${amountLabel} now — this is the difference between your current plan and the selected plan. Proceed to payment?`
+            [summary.headline, summary.detail].filter(Boolean).join("\n\n")
           )
           if (!ok) {
             setIsLoading(null)
