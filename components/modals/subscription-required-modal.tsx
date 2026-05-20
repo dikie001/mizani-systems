@@ -77,8 +77,10 @@ export function SubscriptionRequiredModal({
 
   // Determine which plans to show
   let plansToShow = PLANS.filter((plan) => plan.monthlyPrice > 0)
-  const userPlan = selectedPlanName ? PLANS.find(p => p.name === selectedPlanName) : null
-  
+  const userPlan = selectedPlanName
+    ? PLANS.find((p) => p.name === selectedPlanName)
+    : null
+
   if (userPlan && userPlan.monthlyPrice > 0) {
     plansToShow = [userPlan]
   }
@@ -102,7 +104,9 @@ export function SubscriptionRequiredModal({
         </AlertDialogHeader>
 
         <div className="bg-muted/30 p-8 pt-2">
-          <div className={`grid gap-6 ${plansToShow.length === 1 ? 'max-w-md mx-auto' : 'md:grid-cols-2'}`}>
+          <div
+            className={`grid gap-6 ${plansToShow.length === 1 ? "mx-auto max-w-md" : "md:grid-cols-2"}`}
+          >
             {plansToShow.map((plan) => {
               const isGold = plan.highlight
 
@@ -169,7 +173,9 @@ export function SubscriptionRequiredModal({
                       {isLoading === plan.id ? (
                         <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                       ) : null}
-                      {isLoading === plan.id ? "Processing..." : `Complete ${plan.displayName} Payment`}
+                      {isLoading === plan.id
+                        ? "Processing..."
+                        : `Complete ${plan.displayName} Payment`}
                     </Button>
                   </CardContent>
                 </Card>
