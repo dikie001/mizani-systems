@@ -15,6 +15,11 @@ export const authConfig: NextAuthConfig = {
   },
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
+      const isAuthApiRoute = nextUrl.pathname.startsWith("/api/auth")
+      if (isAuthApiRoute) {
+        return true
+      }
+
       const isLoggedIn = !!auth?.user
       const isDashboard = nextUrl.pathname.startsWith("/dashboard")
       const isOnboarding = nextUrl.pathname === "/onboarding"

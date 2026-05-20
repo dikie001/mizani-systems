@@ -11,17 +11,21 @@ export default function PopupCompletePage() {
     const callbackUrl = params.get("callbackUrl") || "/dashboard"
     const error = params.get("error")
 
-    if (window.opener && !window.opener.closed) {
-      window.opener.postMessage(
-        {
-          type: "google-auth:result",
-          callbackUrl,
-          error,
-        },
-        window.location.origin,
-      )
-      window.close()
-      return
+    if (window.opener) {
+      try {
+        window.opener.postMessage(
+          {
+            type: "google-auth:result",
+            callbackUrl,
+            error,
+          },
+          window.location.origin,
+        )
+        window.close()
+        return
+      } catch {
+        // If cross-origin protections block opener access, fall back to redirect.
+      }
     }
 
     router.replace(callbackUrl)

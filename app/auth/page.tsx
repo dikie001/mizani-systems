@@ -78,7 +78,7 @@ function AuthContent() {
 
     return getAuthErrorMessage(error)
   })
-  const popupCheckRef = useRef<number | null>(null)
+  const popupResetTimeoutRef = useRef<number | null>(null)
 
   const planId = searchParams.get("plan")
   const selectedPlan = planId ? getPlanById(planId) : null
@@ -149,9 +149,9 @@ function AuthContent() {
         return
       }
 
-      if (popupCheckRef.current) {
-        window.clearInterval(popupCheckRef.current)
-        popupCheckRef.current = null
+      if (popupResetTimeoutRef.current) {
+        window.clearTimeout(popupResetTimeoutRef.current)
+        popupResetTimeoutRef.current = null
       }
 
       if (payload.error) {
@@ -176,8 +176,8 @@ function AuthContent() {
     window.addEventListener("message", handleMessage)
     return () => {
       window.removeEventListener("message", handleMessage)
-      if (popupCheckRef.current) {
-        window.clearInterval(popupCheckRef.current)
+      if (popupResetTimeoutRef.current) {
+        window.clearTimeout(popupResetTimeoutRef.current)
       }
     }
   }, [router])
@@ -214,18 +214,17 @@ function AuthContent() {
 
     popup.focus()
 
-    popupCheckRef.current = window.setInterval(() => {
-      if (!popup.closed) {
-        return
-      }
+    if (popupResetTimeoutRef.current) {
+      window.clearTimeout(popupResetTimeoutRef.current)
+    }
 
-      if (popupCheckRef.current) {
-        window.clearInterval(popupCheckRef.current)
-        popupCheckRef.current = null
-      }
-
-      setGoogleAuthState("idle")
-    }, 500)
+    // Fallback in case the popup is closed before posting back.
+    popupResetTimeoutRef.current = window.setTimeout(() => {
+      setGoogleAuthState((current) =>
+        current === "opening" ? "idle" : current
+      )
+      popupResetTimeoutRef.current = null
+    }, 60_000)
   }
 
   return (

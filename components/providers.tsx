@@ -7,6 +7,23 @@ import { useEffect } from "react"
 import { toast } from "sonner"
 
 let isRateLimitActive = false
+let hasLoggedAuthSessionHtmlWarning = false
+
+function getRequestUrl(input: RequestInfo | URL): string | null {
+  if (typeof input === "string") {
+    return input
+  }
+
+  if (input instanceof URL) {
+    return input.toString()
+  }
+
+  if (input instanceof Request) {
+    return input.url
+  }
+
+  return null
+}
 
 export function Providers({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -14,7 +31,30 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
     const originalFetch = window.fetch
     window.fetch = async (...args) => {
+      const requestUrl = getRequestUrl(args[0])
       const response = await originalFetch(...args)
+
+      if (requestUrl) {
+        const url = new URL(requestUrl, window.location.origin)
+        const isSessionEndpoint = url.pathname === "/api/auth/session"
+        const contentType = response.headers.get("content-type") || ""
+
+        if (isSessionEndpoint && contentType.includes("text/html")) {
+          if (!hasLoggedAuthSessionHtmlWarning) {
+            hasLoggedAuthSessionHtmlWarning = true
+            console.warn(
+              "Expected JSON from /api/auth/session but received HTML. Returning null session fallback to prevent client parse errors."
+            )
+          }
+
+          return new Response("null", {
+            status: 200,
+            headers: {
+              "Content-Type": "application/json",
+            },
+          })
+        }
+      }
 
       if (response.status === 429) {
         try {
