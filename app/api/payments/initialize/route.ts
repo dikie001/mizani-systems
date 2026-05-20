@@ -191,15 +191,14 @@ export async function POST(request: NextRequest) {
       data: { selectedPlanId: dbPlan.id },
     })
 
+    // Only look at the active subscription to determine the current plan.
+    // `workspace.selectedPlan` is what the user wants to BUY, not what they
+    // currently have — using it as currentPrice caused every new signup to
+    // appear as a "no_change" and silently skip Paystack.
     const currentSubscription = workspace.subscription
-    const currentMonthlyPrice =
-      currentSubscription?.plan?.monthlyPrice ??
-      workspace?.selectedPlan?.monthlyPrice ??
-      0
+    const currentMonthlyPrice = currentSubscription?.plan?.monthlyPrice ?? 0
     const currentPlanDisplayName =
-      currentSubscription?.plan?.displayName ??
-      workspace?.selectedPlan?.displayName ??
-      "Free Trial"
+      currentSubscription?.plan?.displayName ?? "Free Trial"
     const paymentSummary = buildPaymentSummary({
       currentPlanDisplayName,
       currentPrice: currentMonthlyPrice,
