@@ -48,7 +48,8 @@ export async function GET(request: NextRequest) {
         data: {
           status: "success",
           paidAt: new Date((paymentData as any).paid_at),
-          paystackAuthCode: (paymentData as any).authorization?.authorization_code,
+          paystackAuthCode: (paymentData as any).authorization
+            ?.authorization_code,
         },
       })
 
@@ -77,8 +78,8 @@ export async function GET(request: NextRequest) {
             planId: workspace.selectedPlanId!,
             status: "active",
             paymentStatus: "paid",
-            paystackAuthorizationCode:
-              (paymentData as any).authorization?.authorization_code,
+            paystackAuthorizationCode: (paymentData as any).authorization
+              ?.authorization_code,
             currentBillingCycleStart: new Date(),
             currentBillingCycleEnd: new Date(
               Date.now() + 30 * 24 * 60 * 60 * 1000
@@ -93,8 +94,8 @@ export async function GET(request: NextRequest) {
             planId: workspace.selectedPlanId!,
             status: "active",
             paymentStatus: "paid",
-            paystackAuthorizationCode:
-              (paymentData as any).authorization?.authorization_code,
+            paystackAuthorizationCode: (paymentData as any).authorization
+              ?.authorization_code,
             currentBillingCycleStart: new Date(),
             currentBillingCycleEnd: new Date(
               Date.now() + 30 * 24 * 60 * 60 * 1000
@@ -124,9 +125,7 @@ export async function GET(request: NextRequest) {
           currency: "KES",
           status: "paid",
           billingPeriodStart: new Date(),
-          billingPeriodEnd: new Date(
-            Date.now() + 30 * 24 * 60 * 60 * 1000
-          ),
+          billingPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
           dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
           paidAt: new Date(),
           description: `${workspace.selectedPlan.displayName} Plan - Monthly`,
