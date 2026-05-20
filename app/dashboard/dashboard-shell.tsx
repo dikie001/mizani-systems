@@ -2,7 +2,6 @@
 
 import { useEffect } from "react"
 import { usePathname, useRouter } from "next/navigation"
-import { Loader2 } from "lucide-react"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { DashboardHeader } from "@/components/dashboard-header"
@@ -18,12 +17,11 @@ export function DashboardShell({
   const router = useRouter()
 
   useEffect(() => {
+    // Only redirect to billing if payment is required and not already on billing page
     if (requiresPayment && pathname !== "/dashboard/billing") {
       router.replace("/dashboard/billing")
     }
   }, [requiresPayment, pathname, router])
-
-  const showContent = !requiresPayment || pathname === "/dashboard/billing"
 
   return (
     <SidebarProvider
@@ -37,18 +35,7 @@ export function DashboardShell({
       <DashboardSidebar />
       <SidebarInset className="h-svh overflow-hidden">
         <DashboardHeader />
-        <main className="flex-1 overflow-auto p-4 md:p-6">
-          {showContent ? (
-            children
-          ) : (
-            <div className="flex h-[80vh] w-full flex-col items-center justify-center gap-4 bg-background">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-sm font-medium text-muted-foreground animate-pulse">
-                Redirecting to Billing Portal...
-              </p>
-            </div>
-          )}
-        </main>
+        <main className="flex-1 overflow-auto p-4 md:p-6">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   )

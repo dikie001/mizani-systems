@@ -23,7 +23,7 @@ export async function updateSubscriptionPlan(planId: "basic" | "pro") {
     await prisma.$transaction(async (tx) => {
       // Find or create Plan
       let dbPlan = await tx.plan.findFirst({
-        where: { name: staticPlan.id }
+        where: { name: staticPlan.id },
       })
 
       if (!dbPlan) {
@@ -35,16 +35,17 @@ export async function updateSubscriptionPlan(planId: "basic" | "pro") {
             description: staticPlan.description,
             monthlyPrice: staticPlan.monthlyPrice,
             features: staticPlan.features,
-          }
+          },
         })
       }
 
       // Find existing subscription
       const existingSub = await tx.subscription.findUnique({
-        where: { workspaceId }
+        where: { workspaceId },
       })
 
       let subscription
+      // Activate the new plan immediately
       if (existingSub) {
         subscription = await tx.subscription.update({
           where: { workspaceId },
@@ -53,11 +54,13 @@ export async function updateSubscriptionPlan(planId: "basic" | "pro") {
             status: "active",
             paymentStatus: "paid",
             currentBillingCycleStart: new Date(),
-            currentBillingCycleEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            currentBillingCycleEnd: new Date(
+              Date.now() + 30 * 24 * 60 * 60 * 1000
+            ),
             nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
             cancelledAt: null,
             cancelReason: null,
-          }
+          },
         })
       } else {
         subscription = await tx.subscription.create({
@@ -67,9 +70,11 @@ export async function updateSubscriptionPlan(planId: "basic" | "pro") {
             status: "active",
             paymentStatus: "paid",
             currentBillingCycleStart: new Date(),
-            currentBillingCycleEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            currentBillingCycleEnd: new Date(
+              Date.now() + 30 * 24 * 60 * 60 * 1000
+            ),
             nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          }
+          },
         })
       }
 
@@ -79,7 +84,7 @@ export async function updateSubscriptionPlan(planId: "basic" | "pro") {
         data: {
           selectedPlanId: dbPlan.id,
           subscriptionId: subscription.id,
-        }
+        },
       })
 
       // Add audit log
@@ -90,7 +95,7 @@ export async function updateSubscriptionPlan(planId: "basic" | "pro") {
           type: "update",
           userId,
           workspaceId,
-        }
+        },
       })
 
       // Create notification
@@ -102,7 +107,7 @@ export async function updateSubscriptionPlan(planId: "basic" | "pro") {
           description: `Plan changed to ${staticPlan.displayName}.`,
           severity: "info",
           status: "unread",
-        }
+        },
       })
 
       return subscription
@@ -113,7 +118,10 @@ export async function updateSubscriptionPlan(planId: "basic" | "pro") {
     return { success: true }
   } catch (error) {
     console.error("Failed to update subscription:", error)
-    return { success: false, error: "Failed to update subscription. Please try again." }
+    return {
+      success: false,
+      error: "Failed to update subscription. Please try again.",
+    }
   }
 }
 
@@ -129,7 +137,7 @@ export async function cancelSubscription() {
   try {
     await prisma.$transaction(async (tx) => {
       const existingSub = await tx.subscription.findUnique({
-        where: { workspaceId }
+        where: { workspaceId },
       })
 
       if (!existingSub) {
@@ -143,7 +151,7 @@ export async function cancelSubscription() {
           paymentStatus: "unpaid",
           cancelledAt: new Date(),
           cancelReason: "Cancelled by user via Billing Portal",
-        }
+        },
       })
 
       // Add audit log
@@ -154,7 +162,7 @@ export async function cancelSubscription() {
           type: "update",
           userId,
           workspaceId,
-        }
+        },
       })
 
       // Create notification
@@ -163,10 +171,11 @@ export async function cancelSubscription() {
           workspaceId,
           type: "activity",
           title: "Subscription Cancelled",
-          description: "Your plan has been cancelled and features are suspended.",
+          description:
+            "Your plan has been cancelled and features are suspended.",
           severity: "warning",
           status: "unread",
-        }
+        },
       })
     })
 
@@ -175,6 +184,12 @@ export async function cancelSubscription() {
     return { success: true }
   } catch (error) {
     console.error("Failed to cancel subscription:", error)
-    return { success: false, error: error instanceof Error ? error.message : "Failed to cancel subscription" }
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to cancel subscription",
+    }
   }
 }

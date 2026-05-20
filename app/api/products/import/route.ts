@@ -5,6 +5,7 @@ import {
   parseProductImport,
   productQueryInclude,
 } from "@/lib/inventory"
+import { getPlanEntitlements, getWorkspacePlanName } from "@/lib/plans"
 import prisma from "@/lib/prisma"
 
 export async function POST(request: Request) {
@@ -19,6 +20,45 @@ export async function POST(request: Request) {
     const body = await request.json()
     const items = parseProductImport(body)
 
+    const subscription = await prisma.subscription.findUnique({
+      where: { workspaceId },
+      include: { plan: true },
+    })
+    const planName = getWorkspacePlanName(subscription)
+    const entitlements = getPlanEntitlements(planName)
+    const currentProductCount = await prisma.product.count({
+      where: { workspaceId },
+    })
+
+    let newItemsCount = 0
+    for (const item of items) {
+      const existing = await prisma.product.findUnique({
+        where: {
+          workspaceId_sku: {
+            workspaceId,
+            sku: item.sku,
+          },
+        },
+      })
+      if (!existing) {
+        newItemsCount++
+      }
+    }
+
+    if (
+      entitlements.maxProducts !== null &&
+      currentProductCount + newItemsCount > entitlements.maxProducts
+    ) {
+      const limitLabel = planName === "trial" ? "Free Trial" : "Basic"
+      const upgradeLabel = planName === "trial" ? "Basic" : "Professional"
+      return NextResponse.json(
+        {
+          error: `Import failed: ${limitLabel} workspace is limited to ${entitlements.maxProducts.toLocaleString()} SKUs. Creating these would bring total to ${currentProductCount + newItemsCount}. Please upgrade to ${upgradeLabel}.`,
+        },
+        { status: 403 }
+      )
+    }
+
     const summary = {
       created: 0,
       updated: 0,
@@ -31,7 +71,7 @@ export async function POST(request: Request) {
             workspaceId_name: {
               workspaceId,
               name: item.category,
-            }
+            },
           },
           update: {},
           create: {
@@ -45,7 +85,7 @@ export async function POST(request: Request) {
             workspaceId_sku: {
               workspaceId,
               sku: item.sku,
-            }
+            },
           },
           include: productQueryInclude(),
         })

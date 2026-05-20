@@ -6,6 +6,7 @@ import {
   normalizeProductPayload,
   productQueryInclude,
 } from "@/lib/inventory"
+import { getPlanEntitlements, getWorkspacePlanName } from "@/lib/plans"
 import prisma from "@/lib/prisma"
 import type { Prisma } from "@prisma/client"
 
@@ -75,6 +76,30 @@ export async function POST(request: Request) {
   const workspaceId = session.user.workspaceId
 
   try {
+    const subscription = await prisma.subscription.findUnique({
+      where: { workspaceId },
+      include: { plan: true },
+    })
+    const planName = getWorkspacePlanName(subscription)
+    const entitlements = getPlanEntitlements(planName)
+    const productCount = await prisma.product.count({
+      where: { workspaceId },
+    })
+
+    if (
+      entitlements.maxProducts !== null &&
+      productCount >= entitlements.maxProducts
+    ) {
+      const limitLabel = planName === "trial" ? "Free Trial" : "Basic"
+      const upgradeLabel = planName === "trial" ? "Basic" : "Professional"
+      return NextResponse.json(
+        {
+          error: `${limitLabel} workspaces are limited to ${entitlements.maxProducts.toLocaleString()} SKUs. Please upgrade to ${upgradeLabel} to create more.`,
+        },
+        { status: 403 }
+      )
+    }
+
     const payload = normalizeProductPayload(await request.json())
 
     const product = await prisma.$transaction(async (tx) => {

@@ -1,5 +1,6 @@
 import { auth } from "@/auth"
 import { createProductCsv } from "@/lib/inventory"
+import { getPlanEntitlements, getWorkspacePlanName } from "@/lib/plans"
 import prisma from "@/lib/prisma"
 import type { Prisma } from "@prisma/client"
 
@@ -15,6 +16,27 @@ export async function GET(request: Request) {
   }
 
   try {
+    const subscription = await prisma.subscription.findUnique({
+      where: { workspaceId: session.user.workspaceId },
+      include: { plan: true },
+    })
+    const planName = getWorkspacePlanName(subscription)
+    const entitlements = getPlanEntitlements(planName)
+
+    if (!entitlements.canExportCsv) {
+      return new Response(
+        JSON.stringify({
+          error: "CSV export is available on Basic and Professional plans.",
+        }),
+        {
+          status: 403,
+          headers: {
+            "content-type": "application/json",
+          },
+        }
+      )
+    }
+
     const { searchParams } = new URL(request.url)
     const search = searchParams.get("search")
     const category = searchParams.get("category")

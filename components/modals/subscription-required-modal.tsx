@@ -49,6 +49,17 @@ export function SubscriptionRequiredModal({
       const data = await response.json()
 
       if (data.success && data.authorizationUrl) {
+        const summary = data.paymentSummary
+        if (summary?.headline || summary?.detail) {
+          const ok = window.confirm(
+            [summary.headline, summary.detail].filter(Boolean).join("\n\n")
+          )
+          if (!ok) {
+            setIsLoading(null)
+            return
+          }
+        }
+
         window.location.href = data.authorizationUrl
       } else if (data.success && !data.authorizationUrl) {
         // Free trial fallback (though normally they wouldn't see this modal for trial)
@@ -66,8 +77,10 @@ export function SubscriptionRequiredModal({
 
   // Determine which plans to show
   let plansToShow = PLANS.filter((plan) => plan.monthlyPrice > 0)
-  const userPlan = selectedPlanName ? PLANS.find(p => p.name === selectedPlanName) : null
-  
+  const userPlan = selectedPlanName
+    ? PLANS.find((p) => p.name === selectedPlanName)
+    : null
+
   if (userPlan && userPlan.monthlyPrice > 0) {
     plansToShow = [userPlan]
   }
@@ -75,7 +88,7 @@ export function SubscriptionRequiredModal({
   return (
     <AlertDialog open={isOpen}>
       <AlertDialogContent className="max-w-4xl overflow-hidden border-border/50 bg-background/95 p-0 backdrop-blur-xl">
-        <div className="absolute inset-0 -z-10 bg-gradient-to-br from-primary/5 via-background to-secondary/5" />
+        <div className="absolute inset-0 -z-10 bg-linear-to-br from-primary/5 via-background to-secondary/5" />
         <AlertDialogHeader className="px-8 pt-8 pb-4 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 shadow-inner ring-1 ring-primary/20">
             <CreditCard className="h-7 w-7 text-primary" />
@@ -91,7 +104,9 @@ export function SubscriptionRequiredModal({
         </AlertDialogHeader>
 
         <div className="bg-muted/30 p-8 pt-2">
-          <div className={`grid gap-6 ${plansToShow.length === 1 ? 'max-w-md mx-auto' : 'md:grid-cols-2'}`}>
+          <div
+            className={`grid gap-6 ${plansToShow.length === 1 ? "mx-auto max-w-md" : "md:grid-cols-2"}`}
+          >
             {plansToShow.map((plan) => {
               const isGold = plan.highlight
 
@@ -158,7 +173,9 @@ export function SubscriptionRequiredModal({
                       {isLoading === plan.id ? (
                         <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                       ) : null}
-                      {isLoading === plan.id ? "Processing..." : `Complete ${plan.displayName} Payment`}
+                      {isLoading === plan.id
+                        ? "Processing..."
+                        : `Complete ${plan.displayName} Payment`}
                     </Button>
                   </CardContent>
                 </Card>

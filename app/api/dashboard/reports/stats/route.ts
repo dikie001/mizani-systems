@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { auth } from "@/auth"
+import { getWorkspacePlanName, getPlanEntitlements } from "@/lib/plans"
 import { startOfDay, subDays, subMilliseconds, subMonths } from "date-fns"
 
 type RangeKey = "7d" | "30d" | "3m" | "12m"
@@ -109,6 +110,19 @@ export async function GET(request: Request) {
   }
 
   const workspaceId = session.user.workspaceId
+  const subscription = await prisma.subscription.findUnique({
+    where: { workspaceId },
+    include: { plan: true },
+  })
+  const planName = getWorkspacePlanName(subscription)
+  const entitlements = getPlanEntitlements(planName)
+
+  if (!entitlements.canUseAnalytics) {
+    return NextResponse.json(
+      { error: "Advanced analytics are available on the Professional plan." },
+      { status: 403 }
+    )
+  }
 
   const { searchParams } = new URL(request.url)
   const requestedRange = searchParams.get("range") || "12m"
