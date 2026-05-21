@@ -971,7 +971,7 @@ function Footer() {
         <div className="flex flex-col items-start justify-between gap-8 md:flex-row md:items-center">
           <div>
             <div className="mb-2 flex shrink-0 items-center gap-2.5 text-sm font-semibold whitespace-nowrap">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded- border border-border bg-card shadow-sm">
+              <div className="rounded- flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden border border-border bg-card shadow-sm">
                 <Image
                   src="/mizani_logo.png"
                   alt="Mizani"
