@@ -152,12 +152,13 @@ function Navbar({ session }: { session: Session | null }) {
             href="/"
             className="flex shrink-0 items-center gap-2.5 text-[15px] font-semibold tracking-tight whitespace-nowrap"
           >
-            <div className="relative h-8 w-8 shrink-0">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-card shadow-sm">
               <Image
                 src="/mizani_logo.png"
                 alt="Mizani"
-                fill
-                className="object-contain"
+                width={32}
+                height={32}
+                className="h-full w-full object-contain"
                 priority
               />
             </div>
@@ -221,12 +222,13 @@ function Navbar({ session }: { session: Session | null }) {
                 onClick={() => setIsOpen(false)}
                 className="flex items-center gap-2.5 text-[15px] font-semibold tracking-tight"
               >
-                <div className="relative h-7 w-7 shrink-0">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-card shadow-sm">
                   <Image
                     src="/mizani_logo.png"
                     alt="Mizani"
-                    fill
-                    className="object-contain"
+                    width={28}
+                    height={28}
+                    className="h-full w-full object-contain"
                   />
                 </div>
                 Mizani Systems
@@ -969,12 +971,13 @@ function Footer() {
         <div className="flex flex-col items-start justify-between gap-8 md:flex-row md:items-center">
           <div>
             <div className="mb-2 flex shrink-0 items-center gap-2.5 text-sm font-semibold whitespace-nowrap">
-              <div className="relative h-7 w-7 shrink-0">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded- border border-border bg-card shadow-sm">
                 <Image
                   src="/mizani_logo.png"
                   alt="Mizani"
-                  fill
-                  className="object-contain drop-shadow-sm"
+                  width={28}
+                  height={28}
+                  className="h-full w-full object-contain"
                 />
               </div>
               Mizani Systems
@@ -1057,50 +1060,37 @@ function PageLoader() {
       transition={{ duration: 0.45, ease: "easeInOut" }}
       className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background"
     >
-      {/* Animated logo mark */}
+      {/* Custom spinner */}
       <motion.div
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.45, ease }}
-        className="relative mb-6"
+        transition={{ duration: 0.35, ease }}
+        className="relative flex items-center justify-center"
       >
-        {/* Soft glow ring */}
-        <div className="absolute inset-0 scale-150 rounded-full bg-primary/20 blur-xl" />
-        <div className="relative h-16 w-16">
-          <Image
-            src="/mizani_logo.png"
-            alt="Mizani"
-            fill
-            className="object-contain"
-            priority
+        {/* Outer ring */}
+        <svg
+          className="h-14 w-14 animate-spin"
+          viewBox="0 0 56 56"
+          fill="none"
+          aria-hidden
+        >
+          <circle
+            cx="28"
+            cy="28"
+            r="22"
+            stroke="hsl(var(--primary) / 0.15)"
+            strokeWidth="4"
           />
-        </div>
+          <path
+            d="M28 6 a22 22 0 0 1 22 22"
+            stroke="hsl(var(--primary))"
+            strokeWidth="4"
+            strokeLinecap="round"
+          />
+        </svg>
+        {/* Inner pulsing dot */}
+        <span className="absolute h-3 w-3 animate-pulse rounded-full bg-primary/70" />
       </motion.div>
-
-      {/* Wordmark */}
-      <motion.p
-        initial={{ opacity: 0, y: 6 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.15, ease }}
-        className="mb-6 text-base font-semibold tracking-tight text-foreground"
-      >
-        Mizani Systems
-      </motion.p>
-
-      {/* Animated progress bar */}
-      <div className="h-0.5 w-32 overflow-hidden rounded-full bg-primary/20">
-        <motion.div
-          initial={{ x: "-100%" }}
-          animate={{ x: "100%" }}
-          transition={{
-            duration: 0.9,
-            delay: 0.1,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-          className="h-full w-1/2 rounded-full bg-primary/80"
-        />
-      </div>
     </motion.div>
   )
 }
