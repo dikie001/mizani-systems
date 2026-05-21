@@ -1231,170 +1231,169 @@ function InventoryPageContent() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(products ?? []).slice(
-                  (currentPage - 1) * PAGE_SIZE,
-                  currentPage * PAGE_SIZE
-                ).map((product, index) => (
-                  <TableRow
-                    key={product.id}
-                    className="group cursor-pointer transition-colors hover:bg-muted/30"
-                    onClick={() => setDetailsProductId(product.id)}
-                  >
-                    <TableCell className="py-2.5 text-center font-mono text-xs text-muted-foreground/80">
-                      {(currentPage - 1) * PAGE_SIZE + index + 1}
-                    </TableCell>
-                    <TableCell className="py-2.5">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border/40 bg-muted shadow-inner transition-transform group-hover:scale-105">
-                          {product.image ? (
-                            <ImgWithSpinner
-                              src={product.image}
-                              alt={product.name}
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center bg-primary/5 text-xs font-bold text-primary">
-                              {product.name.charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="truncate text-sm font-semibold tracking-tight text-foreground">
-                            {product.name}
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <span className="font-mono md:hidden">
-                              {product.sku}
-                            </span>
-                            <span className="opacity-30 md:hidden">•</span>
-                            <span>{product.category}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden w-[140px] py-2.5 md:table-cell">
-                      <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
-                        {product.sku}
-                      </code>
-                    </TableCell>
-                    <TableCell className="hidden w-[140px] py-2.5 lg:table-cell">
-                      <Badge
-                        variant="outline"
-                        className="border-muted-foreground/20 text-xs font-normal text-muted-foreground"
-                      >
-                        {product.category}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="w-[110px] py-2.5 text-right font-medium">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="cursor-help underline decoration-muted-foreground/30 decoration-dotted underline-offset-4 transition-colors hover:text-primary">
-                              {formatCumulativePrice(
-                                product.price * product.stock,
-                                currency
-                              )}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent
-                            side="top"
-                            className="z-50 border !border-border !bg-popover px-3 py-2 !text-popover-foreground shadow-lg [&_[data-slot=tooltip-arrow]]:!bg-popover [&_[data-slot=tooltip-arrow]]:!fill-popover"
-                          >
-                            <div className="flex min-w-[170px] flex-col gap-1.5 text-xs">
-                              <div className="flex items-center justify-between gap-4">
-                                <span className="font-medium !text-muted-foreground">
-                                  Total Value:
-                                </span>
-                                <span className="font-bold !text-popover-foreground">
-                                  {formatCurrency(
-                                    product.price * product.stock,
-                                    currency
-                                  )}
-                                </span>
-                              </div>
-                              <div className="flex items-center justify-between gap-4 border-t border-border/60 pt-1.5">
-                                <span className="font-medium !text-muted-foreground">
-                                  Unit Price:
-                                </span>
-                                <span className="font-semibold !text-popover-foreground">
-                                  {formatCurrency(product.price, currency)}
-                                </span>
-                              </div>
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </TableCell>
-                    <TableCell className="w-[140px] py-2.5 text-right font-mono">
-                      <span
-                        className={`text-sm font-semibold ${product.stock <= product.minStock ? "font-bold text-red-500" : "text-foreground"}`}
-                      >
-                        {product.stock}
-                      </span>
-                    </TableCell>
-                    <TableCell className="w-[110px] py-2.5 pl-6">
-                      <span
-                        className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase ${
-                          product.status === "in-stock"
-                            ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                            : product.status === "low-stock"
-                              ? "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                              : "border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400"
-                        } `}
-                      >
-                        {statusConfig[product.status].label}
-                      </span>
-                    </TableCell>
-                    <TableCell
-                      className="w-[50px] py-2.5"
-                      onClick={(e) => e.stopPropagation()}
+                {(products ?? [])
+                  .slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+                  .map((product, index) => (
+                    <TableRow
+                      key={product.id}
+                      className="group cursor-pointer transition-colors hover:bg-muted/30"
+                      onClick={() => setDetailsProductId(product.id)}
                     >
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuItem
-                            onClick={() => beginRecordSale(product)}
-                            className="cursor-pointer font-medium text-primary focus:text-primary"
-                          >
-                            <ShoppingCart className="mr-2 h-4 w-4" />
-                            Record Sale
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => beginEdit(product)}
-                            className="cursor-pointer"
-                          >
-                            <Edit className="mr-2 h-4 w-4 text-muted-foreground" />
-                            Edit Catalog
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => beginAdjustment(product)}
-                            className="cursor-pointer"
-                          >
-                            <ArrowUpDown className="mr-2 h-4 w-4 text-muted-foreground" />
-                            Adjust Stock
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="cursor-pointer text-destructive focus:text-destructive"
-                            onClick={() => handleDelete(product)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      <TableCell className="py-2.5 text-center font-mono text-xs text-muted-foreground/80">
+                        {(currentPage - 1) * PAGE_SIZE + index + 1}
+                      </TableCell>
+                      <TableCell className="py-2.5">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border/40 bg-muted shadow-inner transition-transform group-hover:scale-105">
+                            {product.image ? (
+                              <ImgWithSpinner
+                                src={product.image}
+                                alt={product.name}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center bg-primary/5 text-xs font-bold text-primary">
+                                {product.name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-semibold tracking-tight text-foreground">
+                              {product.name}
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span className="font-mono md:hidden">
+                                {product.sku}
+                              </span>
+                              <span className="opacity-30 md:hidden">•</span>
+                              <span>{product.category}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden w-[140px] py-2.5 md:table-cell">
+                        <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
+                          {product.sku}
+                        </code>
+                      </TableCell>
+                      <TableCell className="hidden w-[140px] py-2.5 lg:table-cell">
+                        <Badge
+                          variant="outline"
+                          className="border-muted-foreground/20 text-xs font-normal text-muted-foreground"
+                        >
+                          {product.category}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="w-[110px] py-2.5 text-right font-medium">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="cursor-help underline decoration-muted-foreground/30 decoration-dotted underline-offset-4 transition-colors hover:text-primary">
+                                {formatCumulativePrice(
+                                  product.price * product.stock,
+                                  currency
+                                )}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent
+                              side="top"
+                              className="z-50 border !border-border !bg-popover px-3 py-2 !text-popover-foreground shadow-lg [&_[data-slot=tooltip-arrow]]:!bg-popover [&_[data-slot=tooltip-arrow]]:!fill-popover"
+                            >
+                              <div className="flex min-w-[170px] flex-col gap-1.5 text-xs">
+                                <div className="flex items-center justify-between gap-4">
+                                  <span className="font-medium !text-muted-foreground">
+                                    Total Value:
+                                  </span>
+                                  <span className="font-bold !text-popover-foreground">
+                                    {formatCurrency(
+                                      product.price * product.stock,
+                                      currency
+                                    )}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between gap-4 border-t border-border/60 pt-1.5">
+                                  <span className="font-medium !text-muted-foreground">
+                                    Unit Price:
+                                  </span>
+                                  <span className="font-semibold !text-popover-foreground">
+                                    {formatCurrency(product.price, currency)}
+                                  </span>
+                                </div>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TableCell>
+                      <TableCell className="w-[140px] py-2.5 text-right font-mono">
+                        <span
+                          className={`text-sm font-semibold ${product.stock <= product.minStock ? "font-bold text-red-500" : "text-foreground"}`}
+                        >
+                          {product.stock}
+                        </span>
+                      </TableCell>
+                      <TableCell className="w-[110px] py-2.5 pl-6">
+                        <span
+                          className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase ${
+                            product.status === "in-stock"
+                              ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                              : product.status === "low-stock"
+                                ? "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                                : "border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400"
+                          } `}
+                        >
+                          {statusConfig[product.status].label}
+                        </span>
+                      </TableCell>
+                      <TableCell
+                        className="w-[50px] py-2.5"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem
+                              onClick={() => beginRecordSale(product)}
+                              className="cursor-pointer font-medium text-primary focus:text-primary"
+                            >
+                              <ShoppingCart className="mr-2 h-4 w-4" />
+                              Record Sale
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => beginEdit(product)}
+                              className="cursor-pointer"
+                            >
+                              <Edit className="mr-2 h-4 w-4 text-muted-foreground" />
+                              Edit Catalog
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => beginAdjustment(product)}
+                              className="cursor-pointer"
+                            >
+                              <ArrowUpDown className="mr-2 h-4 w-4 text-muted-foreground" />
+                              Adjust Stock
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="cursor-pointer text-destructive focus:text-destructive"
+                              onClick={() => handleDelete(product)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 {(products ?? []).length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="h-32 text-center">
@@ -1420,94 +1419,112 @@ function InventoryPageContent() {
           )}
 
           {/* Pagination */}
-          {!isLoading && !error && (products?.length ?? 0) > PAGE_SIZE && (() => {
-            const totalPages = Math.ceil((products?.length ?? 0) / PAGE_SIZE)
-            const from = (currentPage - 1) * PAGE_SIZE + 1
-            const to = Math.min(currentPage * PAGE_SIZE, products?.length ?? 0)
-            return (
-              <div className="flex items-center justify-between border-t border-border/40 pt-4 mt-2">
-                <p className="text-xs text-muted-foreground">
-                  Showing{" "}
-                  <span className="font-medium text-foreground">{from}–{to}</span>{" "}
-                  of{" "}
-                  <span className="font-medium text-foreground">{products?.length}</span>{" "}
-                  products
-                </p>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 px-2.5 text-xs"
-                    onClick={() => setCurrentPage(1)}
-                    disabled={currentPage === 1}
-                  >
-                    «
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 px-2.5 text-xs"
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                  >
-                    ‹ Prev
-                  </Button>
+          {!isLoading &&
+            !error &&
+            (products?.length ?? 0) > PAGE_SIZE &&
+            (() => {
+              const totalPages = Math.ceil((products?.length ?? 0) / PAGE_SIZE)
+              const from = (currentPage - 1) * PAGE_SIZE + 1
+              const to = Math.min(
+                currentPage * PAGE_SIZE,
+                products?.length ?? 0
+              )
+              return (
+                <div className="mt-2 flex items-center justify-between border-t border-border/40 pt-4">
+                  <p className="text-xs text-muted-foreground">
+                    Showing{" "}
+                    <span className="font-medium text-foreground">
+                      {from}–{to}
+                    </span>{" "}
+                    of{" "}
+                    <span className="font-medium text-foreground">
+                      {products?.length}
+                    </span>{" "}
+                    products
+                  </p>
                   <div className="flex items-center gap-1">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1)
-                      .filter(
-                        (p) =>
-                          p === 1 ||
-                          p === totalPages ||
-                          Math.abs(p - currentPage) <= 1
-                      )
-                      .reduce<(number | "...")[]>((acc, p, idx, arr) => {
-                        if (idx > 0 && (p as number) - (arr[idx - 1] as number) > 1)
-                          acc.push("...")
-                        acc.push(p)
-                        return acc
-                      }, [])
-                      .map((p, i) =>
-                        p === "..." ? (
-                          <span key={`ellipsis-${i}`} className="px-1 text-xs text-muted-foreground">
-                            …
-                          </span>
-                        ) : (
-                          <Button
-                            key={p}
-                            variant={currentPage === p ? "default" : "outline"}
-                            size="sm"
-                            className="h-8 w-8 p-0 text-xs"
-                            onClick={() => setCurrentPage(p as number)}
-                          >
-                            {p}
-                          </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-2.5 text-xs"
+                      onClick={() => setCurrentPage(1)}
+                      disabled={currentPage === 1}
+                    >
+                      «
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-2.5 text-xs"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      ‹ Prev
+                    </Button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter(
+                          (p) =>
+                            p === 1 ||
+                            p === totalPages ||
+                            Math.abs(p - currentPage) <= 1
                         )
-                      )}
+                        .reduce<(number | "...")[]>((acc, p, idx, arr) => {
+                          if (
+                            idx > 0 &&
+                            (p as number) - (arr[idx - 1] as number) > 1
+                          )
+                            acc.push("...")
+                          acc.push(p)
+                          return acc
+                        }, [])
+                        .map((p, i) =>
+                          p === "..." ? (
+                            <span
+                              key={`ellipsis-${i}`}
+                              className="px-1 text-xs text-muted-foreground"
+                            >
+                              …
+                            </span>
+                          ) : (
+                            <Button
+                              key={p}
+                              variant={
+                                currentPage === p ? "default" : "outline"
+                              }
+                              size="sm"
+                              className="h-8 w-8 p-0 text-xs"
+                              onClick={() => setCurrentPage(p as number)}
+                            >
+                              {p}
+                            </Button>
+                          )
+                        )}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-2.5 text-xs"
+                      onClick={() =>
+                        setCurrentPage((p) => Math.min(totalPages, p + 1))
+                      }
+                      disabled={currentPage === totalPages}
+                    >
+                      Next ›
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-2.5 text-xs"
+                      onClick={() => setCurrentPage(totalPages)}
+                      disabled={currentPage === totalPages}
+                    >
+                      »
+                    </Button>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 px-2.5 text-xs"
-                    onClick={() =>
-                      setCurrentPage((p) => Math.min(totalPages, p + 1))
-                    }
-                    disabled={currentPage === totalPages}
-                  >
-                    Next ›
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 px-2.5 text-xs"
-                    onClick={() => setCurrentPage(totalPages)}
-                    disabled={currentPage === totalPages}
-                  >
-                    »
-                  </Button>
                 </div>
-              </div>
-            )
-          })()}
+              )
+            })()}
         </CardContent>
       </Card>
 
