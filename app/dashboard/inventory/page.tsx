@@ -2453,7 +2453,6 @@ function InventoryPageContent() {
           )}
         </DialogContent>
       </Dialog>
-
     </div>
   )
 }

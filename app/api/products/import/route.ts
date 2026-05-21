@@ -19,7 +19,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json()
-    
+
     // Support both formats:
     // 1. New format: { products: [...] } - array of pre-parsed products
     // 2. Legacy format: { content, format } - raw CSV/JSON string
@@ -29,7 +29,8 @@ export async function POST(request: Request) {
         try {
           return normalizeProductPayload(product)
         } catch (error) {
-          const message = error instanceof Error ? error.message : "Invalid product"
+          const message =
+            error instanceof Error ? error.message : "Invalid product"
           throw new Error(`Product ${index + 1}: ${message}`)
         }
       })

@@ -184,34 +184,42 @@ export default function BulkImportPage() {
       } else if (fileName.endsWith(".json")) {
         try {
           const jsonData = JSON.parse(content)
-          const items = Array.isArray(jsonData) ? jsonData : jsonData.products || []
-          
-          const products: ParsedProduct[] = items.map((item: Record<string, unknown>) => {
-            const errors: string[] = []
-            
-            if (!item.name) errors.push("Name is required")
-            if (!item.sku) errors.push("SKU is required")
-            if (!item.category) errors.push("Category is required")
-            
-            const price = parseFloat(String(item.price))
-            if (isNaN(price) || price < 0) errors.push("Invalid price")
-            
-            const stock = parseInt(String(item.stock), 10)
-            if (isNaN(stock) || stock < 0) errors.push("Invalid stock")
+          const items = Array.isArray(jsonData)
+            ? jsonData
+            : jsonData.products || []
 
-            return {
-              name: String(item.name || "").trim(),
-              sku: String(item.sku || "").trim().toUpperCase(),
-              category: String(item.category || "").trim(),
-              price: isNaN(price) ? 0 : price,
-              stock: isNaN(stock) ? 0 : stock,
-              minStock: parseInt(String(item.minStock || 10), 10) || 10,
-              maxStock: parseInt(String(item.maxStock || 100), 10) || 100,
-              description: item.description ? String(item.description).trim() : null,
-              valid: errors.length === 0,
-              errors,
+          const products: ParsedProduct[] = items.map(
+            (item: Record<string, unknown>) => {
+              const errors: string[] = []
+
+              if (!item.name) errors.push("Name is required")
+              if (!item.sku) errors.push("SKU is required")
+              if (!item.category) errors.push("Category is required")
+
+              const price = parseFloat(String(item.price))
+              if (isNaN(price) || price < 0) errors.push("Invalid price")
+
+              const stock = parseInt(String(item.stock), 10)
+              if (isNaN(stock) || stock < 0) errors.push("Invalid stock")
+
+              return {
+                name: String(item.name || "").trim(),
+                sku: String(item.sku || "")
+                  .trim()
+                  .toUpperCase(),
+                category: String(item.category || "").trim(),
+                price: isNaN(price) ? 0 : price,
+                stock: isNaN(stock) ? 0 : stock,
+                minStock: parseInt(String(item.minStock || 10), 10) || 10,
+                maxStock: parseInt(String(item.maxStock || 100), 10) || 100,
+                description: item.description
+                  ? String(item.description).trim()
+                  : null,
+                valid: errors.length === 0,
+                errors,
+              }
             }
-          })
+          )
 
           setParsedProducts(products)
 
@@ -487,7 +495,7 @@ export default function BulkImportPage() {
             </div>
 
             <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                 Required Columns
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -500,7 +508,7 @@ export default function BulkImportPage() {
             </div>
 
             <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                 Optional Columns
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -572,7 +580,9 @@ export default function BulkImportPage() {
                   )}
                 />
                 <p className="mb-1 text-sm font-medium">
-                  {isDragging ? "Drop your file here" : "Drag & drop your file here"}
+                  {isDragging
+                    ? "Drop your file here"
+                    : "Drag & drop your file here"}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   or click to browse (CSV, JSON)
@@ -617,7 +627,9 @@ export default function BulkImportPage() {
             {importing && (
               <div className="space-y-2 py-4">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Importing products...</span>
+                  <span className="text-muted-foreground">
+                    Importing products...
+                  </span>
                   <span className="font-medium">{importProgress}%</span>
                 </div>
                 <Progress value={importProgress} />
@@ -670,7 +682,10 @@ export default function BulkImportPage() {
                       {validProducts.length} Valid
                     </Badge>
                     {invalidProducts.length > 0 && (
-                      <Badge variant="outline" className="gap-1.5 text-amber-600">
+                      <Badge
+                        variant="outline"
+                        className="gap-1.5 text-amber-600"
+                      >
                         <AlertCircle className="h-3 w-3" />
                         {invalidProducts.length} Errors
                       </Badge>
