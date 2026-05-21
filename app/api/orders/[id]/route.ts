@@ -15,17 +15,17 @@ export async function GET(
 
   try {
     const order = await prisma.order.findFirst({
-      where: { 
+      where: {
         id,
-        workspaceId: session.user.workspaceId 
+        workspaceId: session.user.workspaceId,
       },
       include: {
         orderItems: {
           include: {
-            product: true
-          }
-        }
-      }
+            product: true,
+          },
+        },
+      },
     })
 
     if (!order) {
@@ -35,7 +35,10 @@ export async function GET(
     return NextResponse.json(order)
   } catch (error) {
     console.error("Failed to fetch order:", error)
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    )
   }
 }
 
@@ -55,11 +58,11 @@ export async function PATCH(
     const { status, payment, reason } = body
 
     const currentOrder = await prisma.order.findFirst({
-      where: { 
+      where: {
         id,
-        workspaceId: session.user.workspaceId 
+        workspaceId: session.user.workspaceId,
       },
-      include: { orderItems: true }
+      include: { orderItems: true },
     })
 
     if (!currentOrder) {
@@ -72,9 +75,9 @@ export async function PATCH(
         for (const item of currentOrder.orderItems) {
           await tx.product.update({
             where: { id: item.productId },
-            data: { stock: { increment: item.quantity } }
+            data: { stock: { increment: item.quantity } },
           })
-          
+
           await tx.stockMovement.create({
             data: {
               productId: item.productId,
@@ -82,38 +85,40 @@ export async function PATCH(
               workspaceId: currentOrder.workspaceId,
               type: "Restock",
               quantity: item.quantity,
-              status: "completed"
-            }
+              status: "completed",
+            },
           })
         }
 
         await tx.order.update({
           where: { id },
-          data: { 
+          data: {
             status: "cancelled",
-            cancellationReason: reason || null
-          }
+            cancellationReason: reason || null,
+          },
         })
-        
+
         await tx.auditLog.create({
           data: {
             action: `Cancelled order ${id} and restored stock. Reason: ${reason || "Not specified"}`,
             entity: "Order",
             type: "update",
             userId: session.user.id as string,
-            workspaceId: currentOrder.workspaceId
-          }
+            workspaceId: currentOrder.workspaceId,
+          },
         })
       })
-      return NextResponse.json({ message: "Order cancelled and stock restored" })
+      return NextResponse.json({
+        message: "Order cancelled and stock restored",
+      })
     }
 
     const updatedOrder = await prisma.order.update({
       where: { id },
       data: {
         ...(status && { status }),
-        ...(payment && { payment })
-      }
+        ...(payment && { payment }),
+      },
     })
 
     await prisma.auditLog.create({
@@ -122,14 +127,17 @@ export async function PATCH(
         entity: "Order",
         type: "update",
         userId: session.user.id as string,
-        workspaceId: currentOrder.workspaceId
-      }
+        workspaceId: currentOrder.workspaceId,
+      },
     })
 
     return NextResponse.json(updatedOrder)
   } catch (error) {
     console.error("Failed to update order:", error)
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    )
   }
 }
 
@@ -146,11 +154,11 @@ export async function DELETE(
 
   try {
     const order = await prisma.order.findFirst({
-      where: { 
+      where: {
         id,
-        workspaceId: session.user.workspaceId 
+        workspaceId: session.user.workspaceId,
       },
-      select: { workspaceId: true }
+      select: { workspaceId: true },
     })
 
     if (!order) {
@@ -158,22 +166,25 @@ export async function DELETE(
     }
 
     await prisma.order.delete({
-      where: { id }
+      where: { id },
     })
-    
+
     await prisma.auditLog.create({
       data: {
         action: `Deleted order ${id}`,
         entity: "Order",
         type: "delete",
         userId: session.user.id as string,
-        workspaceId: order.workspaceId
-      }
+        workspaceId: order.workspaceId,
+      },
     })
 
     return NextResponse.json({ message: "Order deleted successfully" })
   } catch (error) {
     console.error("Failed to delete order:", error)
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    )
   }
 }

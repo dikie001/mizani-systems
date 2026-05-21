@@ -21,14 +21,17 @@ export async function PATCH(
   try {
     // Verify the notification belongs to the user's workspace
     const notification = await prisma.notification.findFirst({
-      where: { 
+      where: {
         id,
-        workspaceId: session.user.workspaceId 
-      }
+        workspaceId: session.user.workspaceId,
+      },
     })
 
     if (!notification) {
-      return NextResponse.json({ error: "Notification not found" }, { status: 404 })
+      return NextResponse.json(
+        { error: "Notification not found" },
+        { status: 404 }
+      )
     }
 
     const updatedNotification = await prisma.notification.update({

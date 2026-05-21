@@ -21,10 +21,10 @@ export async function PATCH(
   try {
     // Verify the alert belongs to the user's workspace
     const alert = await prisma.alert.findFirst({
-      where: { 
+      where: {
         id,
-        workspaceId: session.user.workspaceId 
-      }
+        workspaceId: session.user.workspaceId,
+      },
     })
 
     if (!alert) {
@@ -33,12 +33,15 @@ export async function PATCH(
 
     const updated = await prisma.alert.update({
       where: { id },
-      data: { status }
+      data: { status },
     })
 
     return NextResponse.json(updated)
   } catch (error) {
     console.error("Failed to update alert:", error)
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    )
   }
 }
