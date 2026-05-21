@@ -1,12 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
+import useSWR from "swr"
+import { mutate as swrMutate } from "swr"
 import jsPDF from "jspdf"
 import {
   CreditCard,
-  AlertCircle,
   CheckCircle2,
   Calendar,
   RefreshCw,
@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   Loader2,
   ChevronDown,
+  Receipt,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -38,8 +39,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { cancelSubscription } from "@/lib/actions/subscription"
-import { mutate } from "swr"
 
+// ─── Types ────────────────────────────────────────────────────────────────────
 type PaymentSummary = {
   action?: "checkout" | "upgrade" | "downgrade" | "no_change"
   amount?: number
@@ -50,12 +51,7 @@ type PaymentSummary = {
 
 interface Subscription {
   id: string
-  plan: {
-    id: string
-    displayName: string
-    name: string
-    monthlyPrice: number
-  }
+  plan: { id: string; displayName: string; name: string; monthlyPrice: number }
   status: string
   paymentStatus: string
   currentBillingCycleStart: string | null
@@ -86,76 +82,37 @@ interface Payment {
   createdAt: string
 }
 
-type RGB = [number, number, number]
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
-const BRAND = {
-  primary: [124, 58, 237] as RGB,
-  primaryDark: [88, 28, 135] as RGB,
-  accent: [245, 243, 255] as RGB,
-  ink: [25, 18, 36] as RGB,
-  muted: [92, 84, 104] as RGB,
-  success: [22, 163, 74] as RGB,
-  warning: [202, 138, 4] as RGB,
-}
-
-const formatInvoiceDate = (value: string) =>
-  new Date(value).toLocaleDateString("en-KE", {
+const fmtDate = (value: string | null) => {
+  if (!value) return "—"
+  return new Date(value).toLocaleDateString("en-KE", {
     year: "numeric",
     month: "short",
     day: "numeric",
   })
+}
 
-const loadImageAsDataUrl = (src: string) =>
-  new Promise<string>((resolve, reject) => {
-    const image = new window.Image()
-    image.crossOrigin = "anonymous"
-    image.onload = () => {
-      const canvas = document.createElement("canvas")
-      canvas.width = image.naturalWidth
-      canvas.height = image.naturalHeight
-
-      const context = canvas.getContext("2d")
-      if (!context) {
-        reject(new Error("Unable to access canvas context"))
-        return
-      }
-
-      context.drawImage(image, 0, 0)
-      resolve(canvas.toDataURL("image/png"))
-    }
-    image.onerror = () => reject(new Error("Unable to load logo"))
-    image.src = src
-  })
-
-const getInvoiceStatusLabel = (status: string) => {
+const statusBadgeClass = (status: string) => {
   switch (status) {
+    case "active":
+    case "trial":
     case "paid":
-      return "Paid"
-    case "overdue":
-      return "Overdue"
-    case "issued":
-      return "Issued"
+    case "success":
+      return "bg-green-500/10 text-green-700 dark:text-green-400"
+    case "pending":
+      return "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400"
     case "cancelled":
-      return "Cancelled"
+    case "failed":
+      return "bg-red-500/10 text-red-700 dark:text-red-400"
     default:
-      return status.charAt(0).toUpperCase() + status.slice(1)
+      return "bg-gray-500/10 text-gray-600"
   }
 }
 
-const getInvoiceStatusColor = (status: string): RGB => {
-  switch (status) {
-    case "paid":
-      return BRAND.success
-    case "overdue":
-      return BRAND.warning
-    case "cancelled":
-      return [220, 38, 38]
-    default:
-      return BRAND.primary
-  }
-}
-
-const generateInvoicePdf = async ({
+// ─── PDF: Payment Receipt ──────────────────────────────────────────────────────
+const generateReceiptPdf = async ({
   invoice,
   workspaceName,
 }: {
@@ -163,137 +120,218 @@ const generateInvoicePdf = async ({
   workspaceName: string
 }) => {
   const doc = new jsPDF({ unit: "pt", format: "a4" })
-  const pageWidth = doc.internal.pageSize.getWidth()
-  const margin = 40
-  const logo = await loadImageAsDataUrl("/mizani_logo.png").catch(() => null)
-  const statusColor = getInvoiceStatusColor(invoice.status)
+  const W = doc.internal.pageSize.getWidth()
+  const M = 50
 
-  doc.setFillColor(250, 248, 255)
-  doc.rect(0, 0, pageWidth, 116, "F")
-  doc.setDrawColor(232, 226, 243)
-  doc.line(margin, 116, pageWidth - margin, 116)
-
-  doc.setFillColor(255, 255, 255)
-  if (logo) {
-    doc.addImage(logo, "PNG", margin, 28, 38, 38)
-  } else {
-    doc.setFillColor(...BRAND.primary)
-    doc.circle(margin + 19, 47, 12, "F")
-  }
-
-  doc.setTextColor(...BRAND.ink)
-  doc.setFont("helvetica", "bold")
-  doc.setFontSize(18)
-  doc.text(workspaceName || "Mizani", margin + 52, 43)
-  doc.setFont("helvetica", "normal")
-  doc.setFontSize(9)
-  doc.setTextColor(...BRAND.muted)
-  doc.text("Invoice", margin + 52, 58)
+  // ── Header band ──
+  doc.setFillColor(109, 40, 217)
+  doc.rect(0, 0, W, 72, "F")
 
   doc.setFont("helvetica", "bold")
   doc.setFontSize(16)
-  doc.setTextColor(...BRAND.ink)
-  doc.text(`INVOICE ${invoice.invoiceNumber}`, pageWidth - margin, 40, {
-    align: "right",
-  })
+  doc.setTextColor(255, 255, 255)
+  doc.text(workspaceName || "Mizani", M, 30)
+
   doc.setFont("helvetica", "normal")
-  doc.setFontSize(10)
-  doc.setTextColor(statusColor[0], statusColor[1], statusColor[2])
-  doc.text(getInvoiceStatusLabel(invoice.status), pageWidth - margin, 56, {
-    align: "right",
-  })
-  doc.setTextColor(...BRAND.muted)
-  doc.text(
-    `Issued ${formatInvoiceDate(invoice.createdAt)}`,
-    pageWidth - margin,
-    72,
-    {
-      align: "right",
-    }
-  )
+  doc.setFontSize(8)
+  doc.setTextColor(216, 180, 254)
+  doc.text("PAYMENT RECEIPT", M, 46)
 
-  doc.setDrawColor(232, 226, 243)
-  doc.line(margin, 92, pageWidth - margin, 92)
-
-  const contentTop = 128
-  const labelX = margin
-  const valueX = margin + 120
+  const receiptNum = invoice.invoiceNumber.startsWith("INV-")
+    ? "RCP-" + invoice.invoiceNumber.slice(4)
+    : invoice.invoiceNumber
 
   doc.setFont("helvetica", "bold")
-  doc.setFontSize(9)
-  doc.setTextColor(...BRAND.muted)
-  doc.text("Billed to", labelX, contentTop)
-
-  doc.setFont("helvetica", "normal")
-  doc.setFontSize(11)
-  doc.setTextColor(...BRAND.ink)
-  doc.text(workspaceName || "Workspace", valueX, contentTop)
-
-  doc.setTextColor(...BRAND.muted)
   doc.setFontSize(10)
-  doc.text("Due date", labelX, contentTop + 20)
-  doc.setTextColor(...BRAND.ink)
-  doc.text(formatInvoiceDate(invoice.dueDate), valueX, contentTop + 20)
+  doc.setTextColor(255, 255, 255)
+  doc.text(receiptNum, W - M, 30, { align: "right" })
+  doc.setFont("helvetica", "normal")
+  doc.setFontSize(8)
+  doc.setTextColor(216, 180, 254)
+  doc.text(fmtDate(invoice.paidAt ?? invoice.createdAt), W - M, 46, {
+    align: "right",
+  })
+
+  // ── Amount block ──
+  let y = 100
+
   doc.setFont("helvetica", "bold")
-  doc.setTextColor(...BRAND.primaryDark)
-  doc.setFontSize(20)
-  doc.text(formatKES(invoice.amount), pageWidth - margin, contentTop + 18, {
-    align: "right",
-  })
-  doc.setFont("helvetica", "normal")
-  doc.setFontSize(10)
-  doc.setTextColor(...BRAND.muted)
-  doc.text("Total due", pageWidth - margin, contentTop + 36, {
-    align: "right",
-  })
+  doc.setFontSize(30)
+  doc.setTextColor(15, 10, 30)
+  doc.text(formatKES(invoice.amount), W / 2, y, { align: "center" })
 
-  if (invoice.description && invoice.description !== "Subscription charge") {
+  doc.setFont("helvetica", "normal")
+  doc.setFontSize(8)
+  doc.setTextColor(130, 120, 150)
+  doc.text("AMOUNT PAID", W / 2, y + 16, { align: "center" })
+
+  // PAID pill
+  doc.setFillColor(220, 252, 231)
+  doc.roundedRect(W / 2 - 20, y + 24, 40, 14, 4, 4, "F")
+  doc.setFont("helvetica", "bold")
+  doc.setFontSize(7)
+  doc.setTextColor(21, 128, 61)
+  doc.text("PAID", W / 2, y + 33, { align: "center" })
+
+  y += 62
+
+  // ── Divider ──
+  doc.setDrawColor(225, 220, 240)
+  doc.line(M, y, W - M, y)
+  y += 20
+
+  // ── Details grid ──
+  const col2 = W / 2 + 12
+
+  const label = (text: string, x: number, ry: number) => {
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(7.5)
+    doc.setTextColor(130, 120, 150)
+    doc.text(text.toUpperCase(), x, ry)
+  }
+  const value = (text: string, x: number, ry: number, maxW?: number) => {
     doc.setFont("helvetica", "normal")
     doc.setFontSize(10)
-    doc.setTextColor(...BRAND.muted)
-    doc.text("Description", labelX, contentTop + 42)
-    doc.setTextColor(...BRAND.ink)
-    doc.text(invoice.description, valueX, contentTop + 42, {
-      maxWidth: pageWidth - margin * 2 - 120,
-    })
+    doc.setTextColor(15, 10, 30)
+    if (maxW) {
+      doc.text(text, x, ry + 12, { maxWidth: maxW })
+    } else {
+      doc.text(text, x, ry + 12)
+    }
   }
 
-  doc.setDrawColor(232, 226, 243)
-  doc.line(margin, contentTop + 70, pageWidth - margin, contentTop + 70)
+  label("Billed To", M, y)
+  label("Plan", col2, y)
+  value(workspaceName || "Workspace", M, y, col2 - M - 16)
+  value(invoice.description || "Subscription Plan", col2, y, W - col2 - M)
 
-  if (invoice.notes) {
-    doc.text(`Notes: ${invoice.notes}`, margin, contentTop + 92, {
-      maxWidth: pageWidth - margin * 2,
-    })
-  }
+  y += 40
 
-  const footerY = contentTop + 132
-  doc.setDrawColor(232, 226, 243)
-  doc.line(margin, footerY, pageWidth - margin, footerY)
+  const period =
+    invoice.billingPeriodStart && invoice.billingPeriodEnd
+      ? `${fmtDate(invoice.billingPeriodStart)} – ${fmtDate(invoice.billingPeriodEnd)}`
+      : "—"
+
+  label("Billing Period", M, y)
+  label("Date Paid", col2, y)
+  value(period, M, y, col2 - M - 16)
+  value(invoice.paidAt ? fmtDate(invoice.paidAt) : "—", col2, y)
+
+  y += 40
+
+  doc.setDrawColor(225, 220, 240)
+  doc.line(M, y, W - M, y)
+  y += 18
+
+  // ── Footer ──
   doc.setFont("helvetica", "normal")
-  doc.setTextColor(...BRAND.muted)
-  doc.setFontSize(9)
+  doc.setFontSize(8)
+  doc.setTextColor(160, 150, 175)
   doc.text(
-    "Generated from the Mizani inventory system. Keep this invoice for your records.",
-    margin,
-    footerY + 18
+    "This receipt confirms your payment. Please retain it for your records.",
+    W / 2,
+    y,
+    { align: "center" }
   )
-  doc.text("mizani", pageWidth - margin, footerY + 18, { align: "right" })
+  doc.text("mizani.app", W / 2, y + 13, { align: "center" })
 
-  doc.save(`invoice-${invoice.invoiceNumber}.pdf`)
+  doc.save(`receipt-${receiptNum}.pdf`)
 }
 
-export default function BillingPage() {
-  const { data: session } = useSession()
-  const router = useRouter()
-  const [subscription, setSubscription] = useState<Subscription | null>(null)
-  const [invoices, setInvoices] = useState<Invoice[]>([])
-  const [payments, setPayments] = useState<Payment[]>([])
-  const [loading, setLoading] = useState(true)
-  const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<
-    string | null
-  >(null)
+// ─── Skeleton loader ──────────────────────────────────────────────────────────
+function BillingSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="space-y-1.5">
+        <Skeleton className="h-8 w-28" />
+        <Skeleton className="h-4 w-72" />
+      </div>
 
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-5 w-48" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="space-y-1.5">
+                <Skeleton className="h-3.5 w-24" />
+                <Skeleton className="h-6 w-40" />
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2 border-t pt-4">
+            <Skeleton className="h-8 w-40" />
+            <Skeleton className="h-8 w-36" />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-5 w-40" />
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-4 border-b pb-3 last:border-0"
+              >
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-32 flex-1" />
+                <Skeleton className="h-5 w-14 rounded-full" />
+                <Skeleton className="h-8 w-28 rounded" />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+export default function BillingPage() {
+  const { data: session, status: sessionStatus } = useSession()
+  const workspaceId = session?.user?.workspaceId
+
+  // All three requests fire in parallel — much faster than sequential awaits
+  const {
+    data: subscription,
+    isLoading: subLoading,
+    mutate: mutateSubscription,
+  } = useSWR<Subscription | null>(
+    workspaceId ? "/api/subscriptions/current" : null,
+    fetcher,
+    { revalidateOnFocus: false }
+  )
+  const {
+    data: rawInvoices,
+    isLoading: invoicesLoading,
+    mutate: mutateInvoices,
+  } = useSWR<Invoice[]>(
+    workspaceId ? "/api/invoices/list" : null,
+    fetcher,
+    { revalidateOnFocus: false }
+  )
+  const {
+    data: rawPayments,
+    isLoading: paymentsLoading,
+    mutate: mutatePayments,
+  } = useSWR<Payment[]>(
+    workspaceId ? "/api/payments/list" : null,
+    fetcher,
+    { revalidateOnFocus: false }
+  )
+
+  const invoices: Invoice[] = rawInvoices ?? []
+  const payments: Payment[] = rawPayments ?? []
+  // Only paid invoices become receipts
+  const receipts = invoices.filter((i) => i.status === "paid")
+
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
   const [isUpgradeOpen, setIsUpgradeOpen] = useState(false)
   const [isCancelOpen, setIsCancelOpen] = useState(false)
   const [isPaymentConfirmOpen, setIsPaymentConfirmOpen] = useState(false)
@@ -308,89 +346,40 @@ export default function BillingPage() {
     summary: PaymentSummary | null
   } | null>(null)
 
-  const fetchBillingData = async () => {
-    if (!(session?.user as any)?.workspaceId) return
-    try {
-      const [subRes, invoicesRes, paymentsRes] = await Promise.all([
-        fetch("/api/subscriptions/current"),
-        fetch("/api/invoices/list"),
-        fetch("/api/payments/list"),
-      ])
-
-      if (subRes.ok) {
-        const subData = await subRes.json()
-        setSubscription(subData)
-      } else {
-        setSubscription(null)
-      }
-
-      if (invoicesRes.ok) {
-        const invoicesData = await invoicesRes.json()
-        setInvoices(invoicesData)
-      }
-
-      if (paymentsRes.ok) {
-        const paymentsData = await paymentsRes.json()
-        setPayments(paymentsData)
-      }
-    } catch (error) {
-      console.error("Failed to fetch billing data:", error)
-      toast.error("Failed to load billing information")
-    } finally {
-      setLoading(false)
-    }
-  }
+  const isLoading =
+    sessionStatus === "loading" ||
+    (!!workspaceId && (subLoading || invoicesLoading || paymentsLoading))
 
   useEffect(() => {
-    const workspaceId = (session?.user as any)?.workspaceId
-    if (!workspaceId) {
-      if (session) {
-        setLoading(false)
-      }
-      return
-    }
-
-    setLoading(true)
-    fetchBillingData()
-  }, [session, (session?.user as any)?.workspaceId])
-
-  useEffect(() => {
-    if (isUpgradeOpen) {
-      const currentPlanName = subscription?.plan?.name || ""
-      const isTrial = currentPlanName === "trial" || currentPlanName === "free"
-      const isInactive =
-        !subscription ||
-        subscription.status === "cancelled" ||
-        subscription.status === "expired"
-
-      const plans = PLANS.filter(
-        (p) => p.id === "basic" || p.id === "pro"
-      ).filter((plan) => {
-        if (isInactive || isTrial) {
-          return true
-        }
-        return plan.id !== currentPlanName
-      })
-
-      if (plans.length > 0) {
-        setExpandedPlanId(plans[0].id)
-      }
-    }
+    if (!isUpgradeOpen) return
+    const currentPlanName = subscription?.plan?.name ?? ""
+    const isTrial = currentPlanName === "trial" || currentPlanName === "free"
+    const isInactive =
+      !subscription ||
+      subscription.status === "cancelled" ||
+      subscription.status === "expired"
+    const plans = PLANS.filter((p) => p.id === "basic" || p.id === "pro").filter(
+      (plan) => (isInactive || isTrial ? true : plan.id !== currentPlanName)
+    )
+    if (plans.length > 0) setExpandedPlanId(plans[0].id)
   }, [isUpgradeOpen, subscription])
+
+  const refreshAll = () =>
+    Promise.all([mutateSubscription(), mutateInvoices(), mutatePayments()])
 
   const handleCancel = async () => {
     setIsCancelling(true)
     try {
       const res = await cancelSubscription()
       if (res.success) {
-        toast.success("Subscription cancelled successfully.")
+        toast.success("Subscription cancelled.")
         setIsCancelOpen(false)
-        await fetchBillingData()
-        mutate("/api/subscriptions/current")
+        await refreshAll()
+        swrMutate("/api/subscriptions/current")
       } else {
-        toast.error(res.error || "Failed to cancel subscription")
+        toast.error(res.error ?? "Failed to cancel subscription")
       }
-    } catch (err) {
+    } catch {
       toast.error("An unexpected error occurred")
     } finally {
       setIsCancelling(false)
@@ -398,12 +387,7 @@ export default function BillingPage() {
   }
 
   const handleUpgrade = async (planId: "basic" | "pro") => {
-    const workspaceId = (session?.user as any)?.workspaceId
-    if (!workspaceId) {
-      toast.error("Workspace not found")
-      return
-    }
-
+    if (!workspaceId) { toast.error("Workspace not found"); return }
     setUpgradeLoadingPlanId(planId)
     try {
       const response = await fetch("/api/payments/initialize", {
@@ -411,125 +395,73 @@ export default function BillingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ planId, workspaceId }),
       })
-
       const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to initialize payment")
-      }
-
+      if (!response.ok) throw new Error(data.error ?? "Failed to initialize payment")
       if (data.authorizationUrl) {
         setPendingPayment({
           authorizationUrl: data.authorizationUrl,
-          summary: data.paymentSummary || null,
+          summary: data.paymentSummary ?? null,
         })
         setIsPaymentConfirmOpen(true)
         return
       }
-
-      toast.success(data.message || "Plan updated successfully")
-      await fetchBillingData()
-      mutate("/api/subscriptions/current")
+      toast.success(data.message ?? "Plan updated successfully")
+      await refreshAll()
+      swrMutate("/api/subscriptions/current")
       setIsUpgradeOpen(false)
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to update plan"
-      )
+      toast.error(error instanceof Error ? error.message : "Failed to update plan")
     } finally {
       setUpgradeLoadingPlanId(null)
     }
   }
 
-  const handleDownloadInvoice = async (invoice: Invoice) => {
-    setDownloadingInvoiceId(invoice.id)
+  const handleDownloadReceipt = async (invoice: Invoice) => {
+    setDownloadingId(invoice.id)
     try {
-      await generateInvoicePdf({
+      await generateReceiptPdf({
         invoice,
-        workspaceName: session?.user?.workspaceName || "Mizani",
+        workspaceName: session?.user?.workspaceName ?? "Mizani",
       })
-      toast.success("Invoice downloaded")
-    } catch (error) {
-      console.error("Failed to download invoice:", error)
-      toast.error("Failed to generate invoice")
+      toast.success("Receipt downloaded")
+    } catch {
+      toast.error("Failed to generate receipt")
     } finally {
-      setDownloadingInvoiceId(null)
+      setDownloadingId(null)
     }
   }
 
-  const formatDate = (date: string | null) => {
-    if (!date) return "—"
-    return new Date(date).toLocaleDateString("en-KE", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    })
-  }
+  // ── Render: loading skeleton ──
+  if (isLoading) return <BillingSkeleton />
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "active":
-      case "trial":
-        return "bg-green-500/10 text-green-600"
-      case "paid":
-      case "success":
-        return "bg-green-500/10 text-green-600"
-      case "pending":
-        return "bg-yellow-500/10 text-yellow-600"
-      case "cancelled":
-      case "failed":
-        return "bg-red-500/10 text-red-600"
-      default:
-        return "bg-gray-500/10 text-gray-600"
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <div className="text-center">
-            <h1 className="text-xl font-semibold text-foreground">
-              Loading billing data
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Please wait while we load your subscription and payment details.
-            </p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
+  // ── Render: page ──
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Billing</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Billing</h1>
         <p className="text-sm text-muted-foreground">
-          Manage your subscription and payment methods
+          Manage your subscription and view payment receipts
         </p>
       </div>
 
-      {/* Current Subscription */}
+      {/* ── Current Subscription ── */}
       {subscription ? (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-base">
+              <CreditCard className="h-4 w-4" />
               Current Subscription
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <div className="text-sm font-medium text-muted-foreground">
-                  Plan
-                </div>
+                <p className="text-sm font-medium text-muted-foreground">Plan</p>
                 <div className="mt-1 flex items-center gap-2">
                   <span className="text-lg font-semibold">
                     {subscription.plan.displayName}
                   </span>
-                  <Badge className={getStatusColor(subscription.status)}>
+                  <Badge className={statusBadgeClass(subscription.status)}>
                     {subscription.status.charAt(0).toUpperCase() +
                       subscription.status.slice(1)}
                   </Badge>
@@ -537,24 +469,24 @@ export default function BillingPage() {
               </div>
 
               <div>
-                <div className="text-sm font-medium text-muted-foreground">
+                <p className="text-sm font-medium text-muted-foreground">
                   Billing Amount
-                </div>
-                <div className="mt-1 text-lg font-semibold">
+                </p>
+                <p className="mt-1 text-lg font-semibold">
                   {formatKES(subscription.plan.monthlyPrice)}/month
-                </div>
+                </p>
               </div>
 
               {subscription.currentBillingCycleStart && (
                 <div>
-                  <div className="text-sm font-medium text-muted-foreground">
+                  <p className="text-sm font-medium text-muted-foreground">
                     Current Cycle
-                  </div>
+                  </p>
                   <div className="mt-1 flex items-center gap-2 text-sm">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <span>
-                      {formatDate(subscription.currentBillingCycleStart)} →{" "}
-                      {formatDate(subscription.currentBillingCycleEnd)}
+                      {fmtDate(subscription.currentBillingCycleStart)} →{" "}
+                      {fmtDate(subscription.currentBillingCycleEnd)}
                     </span>
                   </div>
                 </div>
@@ -562,12 +494,12 @@ export default function BillingPage() {
 
               {subscription.nextBillingDate && (
                 <div>
-                  <div className="text-sm font-medium text-muted-foreground">
+                  <p className="text-sm font-medium text-muted-foreground">
                     Next Billing
-                  </div>
+                  </p>
                   <div className="mt-1 flex items-center gap-2 text-sm">
                     <RefreshCw className="h-4 w-4 text-muted-foreground" />
-                    <span>{formatDate(subscription.nextBillingDate)}</span>
+                    <span>{fmtDate(subscription.nextBillingDate)}</span>
                   </div>
                 </div>
               )}
@@ -586,7 +518,7 @@ export default function BillingPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="text-destructive"
+                  className="text-destructive hover:text-destructive"
                   onClick={() => setIsCancelOpen(true)}
                 >
                   Cancel Subscription
@@ -600,11 +532,9 @@ export default function BillingPage() {
           <CardContent className="flex items-center gap-3 pt-6">
             <AlertTriangle className="h-5 w-5 shrink-0 text-yellow-600" />
             <div>
-              <p className="font-medium text-yellow-600">
-                No Active Subscription
-              </p>
-              <p className="mt-1 text-sm text-yellow-600/80">
-                Choose a plan to get started with all the features
+              <p className="font-medium text-yellow-700">No Active Subscription</p>
+              <p className="mt-0.5 text-sm text-yellow-700/70">
+                Choose a plan to access all features
               </p>
             </div>
             <Button
@@ -618,70 +548,68 @@ export default function BillingPage() {
         </Card>
       )}
 
-      {/* Invoices */}
-      {invoices.length > 0 && (
+      {/* ── Payment Receipts ── */}
+      {receipts.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Invoices</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Receipt className="h-4 w-4" />
+              Payment Receipts
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Invoice Number</TableHead>
+                    <TableHead>Receipt No.</TableHead>
                     <TableHead>Amount</TableHead>
-                    <TableHead>Period</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Paid Date</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
+                    <TableHead>Plan Period</TableHead>
+                    <TableHead>Date Paid</TableHead>
+                    <TableHead className="text-right">Download</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {invoices.map((invoice) => (
-                    <TableRow key={invoice.id}>
-                      <TableCell className="font-mono text-sm">
-                        {invoice.invoiceNumber}
-                      </TableCell>
-                      <TableCell className="font-semibold">
-                        {formatKES(invoice.amount)}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {formatDate(invoice.billingPeriodStart)} →{" "}
-                        {formatDate(invoice.billingPeriodEnd)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getStatusColor(invoice.status)}>
-                          {invoice.status.charAt(0).toUpperCase() +
-                            invoice.status.slice(1)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {formatDate(invoice.paidAt)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-9 gap-2 px-3 text-primary"
-                          onClick={() => handleDownloadInvoice(invoice)}
-                          disabled={downloadingInvoiceId === invoice.id}
-                        >
-                          {downloadingInvoiceId === invoice.id ? (
-                            <>
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                              Downloading
-                            </>
-                          ) : (
-                            <>
-                              <Download className="h-4 w-4" />
-                              Download
-                            </>
-                          )}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {receipts.map((invoice) => {
+                    const receiptNum = invoice.invoiceNumber.startsWith("INV-")
+                      ? "RCP-" + invoice.invoiceNumber.slice(4)
+                      : invoice.invoiceNumber
+                    return (
+                      <TableRow key={invoice.id}>
+                        <TableCell className="font-mono text-sm">
+                          {receiptNum}
+                        </TableCell>
+                        <TableCell className="font-semibold">
+                          {formatKES(invoice.amount)}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {fmtDate(invoice.billingPeriodStart)} –{" "}
+                          {fmtDate(invoice.billingPeriodEnd)}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {fmtDate(invoice.paidAt)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 gap-1.5 text-primary"
+                            onClick={() => handleDownloadReceipt(invoice)}
+                            disabled={downloadingId === invoice.id}
+                          >
+                            {downloadingId === invoice.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Download className="h-3.5 w-3.5" />
+                            )}
+                            {downloadingId === invoice.id
+                              ? "Generating…"
+                              : "Receipt"}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
             </div>
@@ -689,7 +617,7 @@ export default function BillingPage() {
         </Card>
       )}
 
-      {/* Payment History */}
+      {/* ── Payment History ── */}
       {payments.length > 0 && (
         <Card>
           <CardHeader>
@@ -710,19 +638,19 @@ export default function BillingPage() {
                   {payments.map((payment) => (
                     <TableRow key={payment.id}>
                       <TableCell className="text-sm">
-                        {formatDate(payment.createdAt)}
+                        {fmtDate(payment.createdAt)}
                       </TableCell>
                       <TableCell className="font-semibold">
                         {formatKES(payment.amount)}
                       </TableCell>
                       <TableCell>
-                        <Badge className={getStatusColor(payment.status)}>
+                        <Badge className={statusBadgeClass(payment.status)}>
                           {payment.status.charAt(0).toUpperCase() +
                             payment.status.slice(1)}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm">
-                        {payment.paidAt ? formatDate(payment.paidAt) : "—"}
+                        {fmtDate(payment.paidAt)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -733,7 +661,7 @@ export default function BillingPage() {
         </Card>
       )}
 
-      {/* Upgrade / Change Plan Dialog */}
+      {/* ── Upgrade / Change Plan Dialog ── */}
       <Dialog open={isUpgradeOpen} onOpenChange={setIsUpgradeOpen}>
         <DialogContent className="sm:max-w-125">
           <DialogHeader>
@@ -743,11 +671,11 @@ export default function BillingPage() {
             <DialogDescription>
               {subscription?.plan?.displayName ? (
                 <>
-                  You are currently on the{" "}
+                  Currently on{" "}
                   <span className="font-semibold text-foreground">
                     {subscription.plan.displayName}
-                  </span>{" "}
-                  plan. Switch to:
+                  </span>
+                  . Switch to:
                 </>
               ) : (
                 "Choose the plan that fits your business needs."
@@ -757,23 +685,18 @@ export default function BillingPage() {
 
           <div className="mt-4 flex flex-col gap-4">
             {(() => {
-              const currentPlanName = subscription?.plan?.name || ""
+              const currentPlanName = subscription?.plan?.name ?? ""
               const isTrial =
                 currentPlanName === "trial" || currentPlanName === "free"
               const isInactive =
                 !subscription ||
                 subscription.status === "cancelled" ||
                 subscription.status === "expired"
-
               const plansToShow = PLANS.filter(
                 (p) => p.id === "basic" || p.id === "pro"
-              ).filter((plan) => {
-                if (isInactive || isTrial) {
-                  return true
-                }
-                return plan.id !== currentPlanName
-              })
-
+              ).filter((plan) =>
+                isInactive || isTrial ? true : plan.id !== currentPlanName
+              )
               const isCollapsible = plansToShow.length > 1
 
               return plansToShow.map((plan) => {
@@ -781,7 +704,7 @@ export default function BillingPage() {
                 return (
                   <Card
                     key={plan.id}
-                    className={`flex flex-col border-border/80 transition-all ${plan.highlight ? "bg-primary/5 ring-2 ring-primary" : ""} ${isCurrent ? "opacity-90" : ""}`}
+                    className={`border-border/80 transition-all ${plan.highlight ? "bg-primary/5 ring-2 ring-primary" : ""} ${isCurrent ? "opacity-80" : ""}`}
                   >
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between">
@@ -798,8 +721,8 @@ export default function BillingPage() {
                             </Badge>
                           )}
                         </div>
-                        <div className="flex items-baseline">
-                          <span className="text-xl font-bold text-foreground">
+                        <div className="flex items-baseline gap-0.5">
+                          <span className="text-xl font-bold">
                             {formatKES(plan.monthlyPrice)}
                           </span>
                           <span className="text-[10px] text-muted-foreground">
@@ -807,16 +730,16 @@ export default function BillingPage() {
                           </span>
                         </div>
                       </div>
-                      <div className="mt-1 text-xs text-muted-foreground">
+                      <p className="mt-1 text-xs text-muted-foreground">
                         {plan.description}
-                      </div>
+                      </p>
                     </CardHeader>
-                    <CardContent className="pt-2 pb-4">
+                    <CardContent className="pb-4 pt-2">
                       {isCollapsible ? (
                         <>
                           <button
                             type="button"
-                            className="mb-2 flex w-full items-center justify-between py-1 text-xs font-semibold text-foreground/80 transition-colors hover:text-foreground"
+                            className="mb-2 flex w-full items-center justify-between py-1 text-xs font-semibold text-foreground/80 hover:text-foreground"
                             onClick={() =>
                               setExpandedPlanId(
                                 expandedPlanId === plan.id ? null : plan.id
@@ -828,7 +751,6 @@ export default function BillingPage() {
                               className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${expandedPlanId === plan.id ? "rotate-180" : ""}`}
                             />
                           </button>
-
                           {expandedPlanId === plan.id && (
                             <ul className="grid animate-in grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-muted-foreground duration-200 fade-in slide-in-from-top-1">
                               {plan.features.map((feature, idx) => (
@@ -845,9 +767,9 @@ export default function BillingPage() {
                         </>
                       ) : (
                         <>
-                          <div className="mb-2 text-xs font-semibold text-foreground/80">
+                          <p className="mb-2 text-xs font-semibold text-foreground/80">
                             Features:
-                          </div>
+                          </p>
                           <ul className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
                             {plan.features.map((feature, idx) => (
                               <li
@@ -861,32 +783,24 @@ export default function BillingPage() {
                           </ul>
                         </>
                       )}
-
                       {(() => {
                         let actionText = "Upgrade"
                         if (!isInactive && !isTrial) {
-                          if (
-                            currentPlanName === "pro" &&
-                            plan.id === "basic"
-                          ) {
+                          if (currentPlanName === "pro" && plan.id === "basic")
                             actionText = "Downgrade"
-                          } else if (
+                          else if (
                             currentPlanName === "basic" &&
                             plan.id === "pro"
-                          ) {
+                          )
                             actionText = "Upgrade"
-                          }
                         }
-
                         return (
                           <Button
                             className="mt-4 w-full"
                             variant={
-                              isCurrent ? "outline" : (plan.variant as any)
+                              isCurrent ? "outline" : (plan.variant as "default" | "outline" | "secondary")
                             }
-                            disabled={
-                              isCurrent || upgradeLoadingPlanId !== null
-                            }
+                            disabled={isCurrent || upgradeLoadingPlanId !== null}
                             onClick={() =>
                               handleUpgrade(plan.id as "basic" | "pro")
                             }
@@ -913,6 +827,7 @@ export default function BillingPage() {
         </DialogContent>
       </Dialog>
 
+      {/* ── Payment Confirmation Dialog ── */}
       <Dialog
         open={isPaymentConfirmOpen}
         onOpenChange={(open) => {
@@ -929,17 +844,17 @@ export default function BillingPage() {
               Confirm Payment
             </DialogTitle>
             <DialogDescription>
-              Review the payment details before we send you to Paystack.
+              Review the details before we send you to Paystack.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2 text-sm text-muted-foreground">
             <div className="rounded-lg border bg-muted/30 p-4">
-              <p className="text-sm font-medium text-foreground">
-                {pendingPayment?.summary?.headline || "Proceed to Paystack"}
+              <p className="font-medium text-foreground">
+                {pendingPayment?.summary?.headline ?? "Proceed to Paystack"}
               </p>
               <p className="mt-2 whitespace-pre-line">
-                {pendingPayment?.summary?.detail ||
+                {pendingPayment?.summary?.detail ??
                   "You will be redirected to Paystack to complete the transaction."}
               </p>
               {pendingPayment?.summary?.amountLabel && (
@@ -966,7 +881,6 @@ export default function BillingPage() {
               disabled={isRedirectingToPaystack}
               onClick={() => {
                 if (!pendingPayment?.authorizationUrl) return
-
                 setIsRedirectingToPaystack(true)
                 window.location.href = pendingPayment.authorizationUrl
               }}
@@ -974,7 +888,7 @@ export default function BillingPage() {
               {isRedirectingToPaystack ? (
                 <span className="inline-flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Redirecting
+                  Redirecting…
                 </span>
               ) : (
                 "Continue to Paystack"
@@ -984,7 +898,7 @@ export default function BillingPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Cancel Subscription Dialog */}
+      {/* ── Cancel Subscription Dialog ── */}
       <Dialog open={isCancelOpen} onOpenChange={setIsCancelOpen}>
         <DialogContent className="sm:max-w-125">
           <DialogHeader>
@@ -999,8 +913,7 @@ export default function BillingPage() {
           <div className="space-y-2 py-2 text-sm text-muted-foreground">
             <p>
               Your features will be suspended immediately. You will lose access
-              to the dashboard, inventory tracking, alerts, and ordering
-              systems.
+              to inventory tracking, alerts, and ordering systems.
             </p>
             <p className="font-medium text-destructive">
               Only the Billing page will remain accessible so you can resume
@@ -1023,7 +936,7 @@ export default function BillingPage() {
               {isCancelling ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Cancelling...
+                  Cancelling…
                 </>
               ) : (
                 "Yes, cancel subscription"
