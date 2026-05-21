@@ -201,15 +201,18 @@ export default function SuperAdminBillingPage() {
       counts[key] = (counts[key] ?? 0) + 1
     })
     return Object.entries(counts).map(([name, value]) => ({
-      name: name === "free trial" ? "Free Trial" : name.charAt(0).toUpperCase() + name.slice(1),
+      name:
+        name === "free trial"
+          ? "Free Trial"
+          : name.charAt(0).toUpperCase() + name.slice(1),
       value,
       key: name.toLowerCase().includes("trial")
         ? "trial"
         : name.toLowerCase().includes("basic")
-        ? "basic"
-        : name.toLowerCase().includes("pro")
-        ? "pro"
-        : "unassigned",
+          ? "basic"
+          : name.toLowerCase().includes("pro")
+            ? "pro"
+            : "unassigned",
     }))
   }, [workspaces])
 
@@ -222,8 +225,12 @@ export default function SuperAdminBillingPage() {
           <Shield className="h-6 w-6 text-destructive" />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-foreground">Failed to Load Billing Console</h2>
-          <p className="mt-1 max-w-sm text-sm text-muted-foreground">{error.message}</p>
+          <h2 className="text-xl font-bold text-foreground">
+            Failed to Load Billing Console
+          </h2>
+          <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+            {error.message}
+          </p>
         </div>
         <Button variant="outline" onClick={() => mutate()}>
           Retry
@@ -356,7 +363,9 @@ export default function SuperAdminBillingPage() {
                     />
                     <Legend
                       formatter={(value) => (
-                        <span className="text-xs text-muted-foreground">{value}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {value}
+                        </span>
                       )}
                     />
                   </PieChart>
@@ -393,19 +402,32 @@ export default function SuperAdminBillingPage() {
                         <div className="flex items-center gap-2">
                           <span
                             className="inline-block h-2.5 w-2.5 rounded-full"
-                            style={{ backgroundColor: PLAN_COLORS[plan.name] ?? "#6b7280" }}
+                            style={{
+                              backgroundColor:
+                                PLAN_COLORS[plan.name] ?? "#6b7280",
+                            }}
                           />
                           <div>
-                            <p className="font-medium text-foreground">{plan.displayName}</p>
-                            <p className="text-xs text-muted-foreground">{plan.description}</p>
+                            <p className="font-medium text-foreground">
+                              {plan.displayName}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {plan.description}
+                            </p>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell className="font-semibold whitespace-nowrap text-foreground">
-                        {plan.monthlyPrice === 0 ? "Free" : formatKES(plan.monthlyPrice)}
+                        {plan.monthlyPrice === 0
+                          ? "Free"
+                          : formatKES(plan.monthlyPrice)}
                       </TableCell>
                       <TableCell>
-                        <Badge className={getBadgeClass(plan.activeSubscriptions > 0 ? "active" : "pending")}>
+                        <Badge
+                          className={getBadgeClass(
+                            plan.activeSubscriptions > 0 ? "active" : "pending"
+                          )}
+                        >
                           {plan.activeSubscriptions}
                         </Badge>
                       </TableCell>

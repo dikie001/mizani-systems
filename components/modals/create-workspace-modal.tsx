@@ -3,9 +3,9 @@
 import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { 
-  Building2, 
-  Package, 
+import {
+  Building2,
+  Package,
   Store,
   Factory,
   Briefcase,
@@ -26,10 +26,18 @@ import { createWorkspace } from "@/lib/actions/workspace"
 import { toast } from "sonner"
 
 const businessTypes = [
-  { id: "retail", label: "Retail", icon: <Store className="w-4 h-4" /> },
-  { id: "manufacturing", label: "Manufacturing", icon: <Factory className="w-4 h-4" /> },
-  { id: "wholesale", label: "Wholesale", icon: <Layers className="w-4 h-4" /> },
-  { id: "services", label: "Services", icon: <Briefcase className="w-4 h-4" /> },
+  { id: "retail", label: "Retail", icon: <Store className="h-4 w-4" /> },
+  {
+    id: "manufacturing",
+    label: "Manufacturing",
+    icon: <Factory className="h-4 w-4" />,
+  },
+  { id: "wholesale", label: "Wholesale", icon: <Layers className="h-4 w-4" /> },
+  {
+    id: "services",
+    label: "Services",
+    icon: <Briefcase className="h-4 w-4" />,
+  },
 ]
 
 const inventorySizes = [
@@ -43,7 +51,7 @@ export function CreateWorkspaceModal() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { update } = useSession()
-  
+
   const isOpen = searchParams.get("createWorkspace") === "true"
 
   const [formData, setFormData] = useState({
@@ -62,7 +70,7 @@ export function CreateWorkspaceModal() {
       inventorySize: "",
       goals: [],
     })
-    
+
     // Remove query param
     const newSearchParams = new URLSearchParams(searchParams.toString())
     newSearchParams.delete("createWorkspace")
@@ -73,7 +81,7 @@ export function CreateWorkspaceModal() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!formData.name || !formData.businessType || !formData.inventorySize) {
       toast.error("Please fill in all required fields.")
       return
@@ -83,7 +91,10 @@ export function CreateWorkspaceModal() {
     try {
       const result = await createWorkspace(formData)
       if (result.success) {
-        await update({ workspaceId: result.workspaceId, workspaceName: result.workspaceName })
+        await update({
+          workspaceId: result.workspaceId,
+          workspaceName: result.workspaceName,
+        })
         toast.success("Workspace created successfully!")
         onClose()
         router.refresh()
@@ -103,10 +114,11 @@ export function CreateWorkspaceModal() {
         <DialogHeader>
           <DialogTitle>Create New Workspace</DialogTitle>
           <DialogDescription>
-            Add a new workspace to manage a different business or inventory location.
+            Add a new workspace to manage a different business or inventory
+            location.
           </DialogDescription>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-6 pt-4">
           <div className="space-y-2">
             <Label htmlFor="name">Workspace Name *</Label>
@@ -114,7 +126,9 @@ export function CreateWorkspaceModal() {
               id="name"
               placeholder="e.g. Acme Corporation"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
               required
             />
           </div>
@@ -126,14 +140,22 @@ export function CreateWorkspaceModal() {
                 <button
                   type="button"
                   key={type.id}
-                  onClick={() => setFormData({ ...formData, businessType: type.id })}
-                  className={`flex items-center gap-2 p-3 rounded-xl border transition-all text-sm text-left ${
+                  onClick={() =>
+                    setFormData({ ...formData, businessType: type.id })
+                  }
+                  className={`flex items-center gap-2 rounded-xl border p-3 text-left text-sm transition-all ${
                     formData.businessType === type.id
-                      ? "bg-primary/20 border-primary text-foreground"
-                      : "bg-transparent border-border hover:bg-accent hover:text-accent-foreground"
+                      ? "border-primary bg-primary/20 text-foreground"
+                      : "border-border bg-transparent hover:bg-accent hover:text-accent-foreground"
                   }`}
                 >
-                  <div className={formData.businessType === type.id ? "text-primary" : "text-muted-foreground"}>
+                  <div
+                    className={
+                      formData.businessType === type.id
+                        ? "text-primary"
+                        : "text-muted-foreground"
+                    }
+                  >
                     {type.icon}
                   </div>
                   <span className="font-medium">{type.label}</span>
@@ -149,11 +171,13 @@ export function CreateWorkspaceModal() {
                 <button
                   type="button"
                   key={size.id}
-                  onClick={() => setFormData({ ...formData, inventorySize: size.id })}
-                  className={`p-2 rounded-lg border transition-all text-xs font-medium text-center ${
+                  onClick={() =>
+                    setFormData({ ...formData, inventorySize: size.id })
+                  }
+                  className={`rounded-lg border p-2 text-center text-xs font-medium transition-all ${
                     formData.inventorySize === size.id
-                      ? "bg-primary/20 border-primary text-foreground"
-                      : "bg-transparent border-border hover:bg-accent hover:text-accent-foreground"
+                      ? "border-primary bg-primary/20 text-foreground"
+                      : "border-border bg-transparent hover:bg-accent hover:text-accent-foreground"
                   }`}
                 >
                   {size.label}
@@ -162,14 +186,27 @@ export function CreateWorkspaceModal() {
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+          <div className="flex justify-end gap-3 border-t pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting || !formData.name || !formData.businessType || !formData.inventorySize}>
+            <Button
+              type="submit"
+              disabled={
+                isSubmitting ||
+                !formData.name ||
+                !formData.businessType ||
+                !formData.inventorySize
+              }
+            >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Creating...
                 </>
               ) : (
