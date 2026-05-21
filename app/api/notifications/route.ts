@@ -14,7 +14,7 @@ export async function GET() {
     const notifications = await prisma.notification.findMany({
       where: {
         workspaceId,
-        status: { in: ["unread", "read", "active"] },
+        status: { in: ["unread", "read"] },
       },
       include: {
         product: {
