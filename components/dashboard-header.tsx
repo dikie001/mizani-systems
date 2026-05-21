@@ -91,7 +91,11 @@ export function DashboardHeader() {
   const pathname = usePathname()
   const { theme, setTheme } = useTheme()
   const { data: session, status } = useSession()
-  const { data: alertCounts } = useSWR("/api/alerts/counts", fetcher)
+  const workspaceId = session?.user?.workspaceId
+  const { data: alertCounts } = useSWR(
+    workspaceId ? ["/api/alerts/counts", workspaceId] : null,
+    fetcher
+  )
   const [isAvatarReady, setIsAvatarReady] = useState(false)
   const [isAlertsOpen, setIsAlertsOpen] = useState(false)
 

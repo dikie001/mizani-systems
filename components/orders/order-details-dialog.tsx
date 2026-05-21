@@ -1,6 +1,7 @@
 "use client"
 
 import useSWR, { useSWRConfig } from "swr"
+import { useSession } from "next-auth/react"
 import { formatPrice } from "@/lib/utils"
 import {
   Loader2,
@@ -117,17 +118,19 @@ export function OrderDetailsDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const { data: session } = useSession()
+  const workspaceId = session?.user?.workspaceId
   const { mutate: globalMutate } = useSWRConfig()
   const {
     data: order,
     isLoading,
     mutate,
   } = useSWR<OrderDetails | null>(
-    orderId ? `/api/orders/${orderId}` : null,
+    workspaceId && orderId ? [`/api/orders/${orderId}`, workspaceId] : null,
     fetcher
   )
   const { data: workspace } = useSWR<WorkspaceSummary>(
-    "/api/workspaces/current",
+    workspaceId ? ["/api/workspaces/current", workspaceId] : null,
     fetcher
   )
   const currency = workspace?.currency || "KES"

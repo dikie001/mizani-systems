@@ -1,6 +1,7 @@
 "use client"
 
 import useSWR, { mutate } from "swr"
+import { useSession } from "next-auth/react"
 import {
   AlertCircle,
   AlertTriangle,
@@ -111,12 +112,14 @@ function AlertCard({
 }
 
 export default function AlertsPage() {
+  const { data: session } = useSession()
+  const workspaceId = session?.user?.workspaceId
   const { data: activeAlerts, isLoading } = useSWR<AlertItem[]>(
-    "/api/alerts?status=active",
+    workspaceId ? ["/api/alerts?status=active", workspaceId] : null,
     fetcher
   )
   const { data: resolvedAlerts, isLoading: rLoading } = useSWR<AlertItem[]>(
-    "/api/alerts?status=resolved",
+    workspaceId ? ["/api/alerts?status=resolved", workspaceId] : null,
     fetcher
   )
 

@@ -80,13 +80,17 @@ const fetcher = async (url: string) => {
 
 export default function SettingsPage() {
   const { data: session } = useSession()
+  const workspaceId = session?.user?.workspaceId
   const { data: workspace, mutate: mutateWorkspace } = useSWR<WorkspaceSummary>(
-    "/api/workspaces/current",
+    workspaceId ? ["/api/workspaces/current", workspaceId] : null,
     fetcher
   )
   const { data: members, isLoading: membersLoading } = useSWR<
     WorkspaceMember[]
-  >("/api/workspaces/members", fetcher)
+  >(
+    workspaceId ? ["/api/workspaces/members", workspaceId] : null,
+    fetcher
+  )
 
   const [isUpdatingWorkspace, setIsUpdatingWorkspace] = React.useState(false)
   const [workspaceForm, setWorkspaceForm] = React.useState({

@@ -1,8 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
-import useSWR, { useSWRConfig } from "swr"
-import Link from "next/link"
+import useSWR, { useSWRConfig } from "swr"import { useSession } from "next-auth/react"import Link from "next/link"
 import {
   LoaderCircle,
   ExternalLink,
@@ -51,9 +50,11 @@ interface NotificationModalProps {
 }
 
 export function NotificationModal({ open, onOpenChange }: NotificationModalProps) {
+  const { data: session } = useSession()
+  const workspaceId = session?.user?.workspaceId
   const { mutate: globalMutate } = useSWRConfig()
   const { data: notifications, isLoading } = useSWR<NotificationItem[]>(
-    open ? "/api/notifications" : null,
+    open && workspaceId ? ["/api/notifications", workspaceId] : null,
     fetcher
   )
   const [dismissingIds, setDismissingIds] = useState<Record<string, boolean>>({})

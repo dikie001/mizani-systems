@@ -111,12 +111,13 @@ export function DashboardSidebar() {
     setOpenMobile(false)
   }
 
-  const { data: counts } = useSWR("/api/alerts/counts", (url) =>
-    fetch(url).then((res) => (res.ok ? res.json() : null))
+  const { data: counts } = useSWR(
+    workspaceId ? ["/api/alerts/counts", workspaceId] : null,
+    (url) => fetch(url).then((res) => (res.ok ? res.json() : null))
   )
 
   const { data: subscription, isLoading: isSubLoading } = useSWR(
-    workspaceId ? "/api/subscriptions/current" : null,
+    workspaceId ? ["/api/subscriptions/current", workspaceId] : null,
     (url) => fetch(url).then((res) => (res.ok ? res.json() : null))
   )
   const isPlanLoading =

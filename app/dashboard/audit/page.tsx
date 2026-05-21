@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import useSWR from "swr"
+import { useSession } from "next-auth/react"
 import {
   ArrowRightLeft,
   Download,
@@ -95,6 +96,8 @@ type AuditLog = {
 }
 
 export default function AuditPage() {
+  const { data: session } = useSession()
+  const workspaceId = session?.user?.workspaceId
   const [searchQuery, setSearchQuery] = useState("")
   const [typeFilter, setTypeFilter] = useState("all")
 
@@ -102,7 +105,10 @@ export default function AuditPage() {
   if (searchQuery) url += `search=${encodeURIComponent(searchQuery)}&`
   if (typeFilter !== "all") url += `type=${encodeURIComponent(typeFilter)}&`
 
-  const { data: auditLogs, isLoading, error } = useSWR<AuditLog[]>(url, fetcher)
+  const { data: auditLogs, isLoading, error } = useSWR<AuditLog[]>(
+    workspaceId ? [url, workspaceId] : null,
+    fetcher
+  )
 
   return (
     <div className="space-y-6">

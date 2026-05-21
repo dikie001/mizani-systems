@@ -2,6 +2,7 @@
 
 import { startTransition, useEffect, useState } from "react"
 import useSWR, { useSWRConfig } from "swr"
+import { useSession } from "next-auth/react"
 import { toast } from "sonner"
 import {
   Clock,
@@ -132,9 +133,11 @@ const paymentConfig: Record<string, { style: string; label: string }> = {
 }
 
 export default function OrdersPage() {
+  const { data: session } = useSession()
+  const workspaceId = session?.user?.workspaceId
   const { mutate } = useSWRConfig()
   const { data: workspace } = useSWR<WorkspaceSummary>(
-    "/api/workspaces/current",
+    workspaceId ? ["/api/workspaces/current", workspaceId] : null,
     fetcher
   )
   const currency = workspace?.currency || "KES"
@@ -176,7 +179,10 @@ export default function OrdersPage() {
     data: orders,
     error,
     isLoading,
-  } = useSWR<OrderSummary[]>(url, fetcher)
+  } = useSWR<OrderSummary[]>(
+    workspaceId ? [url, workspaceId] : null,
+    fetcher
+  )
 
   const totalRevenue =
     orders

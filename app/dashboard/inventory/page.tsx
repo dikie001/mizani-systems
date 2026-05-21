@@ -12,6 +12,7 @@ import {
 } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import useSWR, { useSWRConfig } from "swr"
+import { useSession } from "next-auth/react"
 import { toast } from "sonner"
 import { formatPrice } from "@/lib/utils"
 import {
@@ -368,6 +369,8 @@ export default function InventoryPage() {
 }
 
 function InventoryPageContent() {
+  const { data: session } = useSession()
+  const workspaceId = session?.user?.workspaceId
   const categoryListId = useId()
   const { mutate } = useSWRConfig()
 
@@ -656,13 +659,16 @@ function InventoryPageContent() {
     error,
     isLoading,
     mutate: mutateProducts,
-  } = useSWR<InventoryProduct[]>(productsUrl, fetcher)
+  } = useSWR<InventoryProduct[]>(
+    workspaceId ? [productsUrl, workspaceId] : null,
+    fetcher
+  )
   const { data: meta, mutate: mutateMeta } = useSWR<InventoryMeta>(
-    "/api/inventory/meta",
+    workspaceId ? ["/api/inventory/meta", workspaceId] : null,
     fetcher
   )
   const { data: workspace } = useSWR<WorkspaceSummary>(
-    "/api/workspaces/current",
+    workspaceId ? ["/api/workspaces/current", workspaceId] : null,
     fetcher
   )
   const currency = workspace?.currency || "KES"
@@ -672,7 +678,7 @@ function InventoryPageContent() {
     isLoading: loadingSelectedProduct,
     mutate: mutateSelectedProduct,
   } = useSWR<InventoryProduct>(
-    detailsProductId ? `/api/products/${detailsProductId}` : null,
+    workspaceId && detailsProductId ? [`/api/products/${detailsProductId}`, workspaceId] : null,
     fetcher
   )
 

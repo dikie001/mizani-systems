@@ -23,6 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import useSWR, { useSWRConfig } from "swr"
+import { useSession } from "next-auth/react"
 import { formatPrice } from "@/lib/utils"
 
 interface Product {
@@ -53,9 +54,11 @@ export function CreateOrderDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const { data: session } = useSession()
+  const workspaceId = session?.user?.workspaceId
   const { mutate } = useSWRConfig()
   const { data: workspace } = useSWR<WorkspaceSummary>(
-    "/api/workspaces/current",
+    workspaceId ? ["/api/workspaces/current", workspaceId] : null,
     async (url: string) => {
       const res = await fetch(url)
       if (!res.ok) {

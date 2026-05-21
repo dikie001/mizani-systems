@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import useSWR from "swr"
+import { useSession } from "next-auth/react"
 import {
   Download,
   TrendingUp,
@@ -118,30 +119,44 @@ const pieColors = [
 ]
 
 export default function ReportsPage() {
+  const { data: session } = useSession()
+  const workspaceId = session?.user?.workspaceId
   const [range, setRange] = useState("12m")
 
   const {
     data: stats,
     error: statsError,
     isLoading: statsLoading,
-  } = useSWR(`/api/dashboard/reports/stats?range=${range}`, fetcher)
+  } = useSWR(
+    workspaceId ? [`/api/dashboard/reports/stats?range=${range}`, workspaceId] : null,
+    fetcher
+  )
   const {
     data: revenueData,
     error: revenueError,
     isLoading: revLoading,
-  } = useSWR(`/api/dashboard/revenue?range=${range}`, fetcher)
+  } = useSWR(
+    workspaceId ? [`/api/dashboard/revenue?range=${range}`, workspaceId] : null,
+    fetcher
+  )
   const {
     data: categoryData,
     error: categoryError,
     isLoading: catLoading,
-  } = useSWR(`/api/dashboard/categories?range=${range}`, fetcher)
+  } = useSWR(
+    workspaceId ? [`/api/dashboard/categories?range=${range}`, workspaceId] : null,
+    fetcher
+  )
   const {
     data: topProducts,
     error: topProductsError,
     isLoading: topLoading,
-  } = useSWR(`/api/dashboard/reports/top-products?range=${range}`, fetcher)
+  } = useSWR(
+    workspaceId ? [`/api/dashboard/reports/top-products?range=${range}`, workspaceId] : null,
+    fetcher
+  )
   const { data: workspace } = useSWR<WorkspaceSummary>(
-    "/api/workspaces/current",
+    workspaceId ? ["/api/workspaces/current", workspaceId] : null,
     fetcher
   )
   const currency = workspace?.currency || "KES"
