@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
         })
       }
 
-      // Update workspace subscription
+      // Update the paying workspace
       await prisma.workspace.update({
         where: { id: payment.workspaceId },
         data: {
@@ -113,6 +113,47 @@ export async function GET(request: NextRequest) {
           subscriptionId: subscription.id,
         },
       })
+
+      // Propagate subscription to every other workspace owned by the same user so
+      // plan is user-scoped, not workspace-scoped.
+      const ownerMembership = await prisma.workspaceMember.findFirst({
+        where: { workspaceId: payment.workspaceId, role: "OWNER" },
+      })
+      if (ownerMembership) {
+        const otherMemberships = await prisma.workspaceMember.findMany({
+          where: {
+            userId: ownerMembership.userId,
+            workspaceId: { not: payment.workspaceId },
+          },
+          select: { workspaceId: true },
+        })
+        for (const m of otherMemberships) {
+          await prisma.subscription.upsert({
+            where: { workspaceId: m.workspaceId },
+            create: {
+              workspaceId: m.workspaceId,
+              planId: workspace.selectedPlanId!,
+              status: "active",
+              paymentStatus: "paid",
+              currentBillingCycleStart: subscription.currentBillingCycleStart,
+              currentBillingCycleEnd: subscription.currentBillingCycleEnd,
+              nextBillingDate: subscription.nextBillingDate,
+            },
+            update: {
+              planId: workspace.selectedPlanId!,
+              status: "active",
+              paymentStatus: "paid",
+              currentBillingCycleStart: subscription.currentBillingCycleStart,
+              currentBillingCycleEnd: subscription.currentBillingCycleEnd,
+              nextBillingDate: subscription.nextBillingDate,
+            },
+          })
+          await prisma.workspace.update({
+            where: { id: m.workspaceId },
+            data: { selectedPlanId: workspace.selectedPlanId! },
+          })
+        }
+      }
 
       // Create invoice for this payment and link it to the payment
       const invoiceNumber = `INV-${Date.now()}`

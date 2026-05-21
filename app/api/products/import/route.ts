@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import {
   computeProductStatus,
+  normalizeProductPayload,
   parseProductImport,
   productQueryInclude,
 } from "@/lib/inventory"
@@ -18,7 +19,24 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json()
-    const items = parseProductImport(body)
+
+    // Support both formats:
+    // 1. New format: { products: [...] } - array of pre-parsed products
+    // 2. Legacy format: { content, format } - raw CSV/JSON string
+    let items
+    if (Array.isArray(body.products)) {
+      items = body.products.map((product: unknown, index: number) => {
+        try {
+          return normalizeProductPayload(product)
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : "Invalid product"
+          throw new Error(`Product ${index + 1}: ${message}`)
+        }
+      })
+    } else {
+      items = parseProductImport(body)
+    }
 
     const subscription = await prisma.subscription.findUnique({
       where: { workspaceId },
