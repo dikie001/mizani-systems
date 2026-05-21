@@ -7,7 +7,7 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  if (!session?.user?.id) {
+  if (!session?.user?.id || !session.user.workspaceId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
@@ -19,6 +19,18 @@ export async function PATCH(
   }
 
   try {
+    // Verify the notification belongs to the user's workspace
+    const notification = await prisma.notification.findFirst({
+      where: { 
+        id,
+        workspaceId: session.user.workspaceId 
+      }
+    })
+
+    if (!notification) {
+      return NextResponse.json({ error: "Notification not found" }, { status: 404 })
+    }
+
     const updatedNotification = await prisma.notification.update({
       where: { id },
       data: { status },

@@ -7,15 +7,18 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  if (!session) {
+  if (!session?.user?.id || !session.user.workspaceId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
   const { id } = await params
 
   try {
-    const order = await prisma.order.findUnique({
-      where: { id },
+    const order = await prisma.order.findFirst({
+      where: { 
+        id,
+        workspaceId: session.user.workspaceId 
+      },
       include: {
         orderItems: {
           include: {
@@ -41,7 +44,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  if (!session || !session.user?.id) {
+  if (!session?.user?.id || !session.user.workspaceId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
@@ -51,8 +54,11 @@ export async function PATCH(
     const body = await request.json()
     const { status, payment, reason } = body
 
-    const currentOrder = await prisma.order.findUnique({
-      where: { id },
+    const currentOrder = await prisma.order.findFirst({
+      where: { 
+        id,
+        workspaceId: session.user.workspaceId 
+      },
       include: { orderItems: true }
     })
 
@@ -132,15 +138,18 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  if (!session || !session.user?.id) {
+  if (!session?.user?.id || !session.user.workspaceId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
   const { id } = await params
 
   try {
-    const order = await prisma.order.findUnique({
-      where: { id },
+    const order = await prisma.order.findFirst({
+      where: { 
+        id,
+        workspaceId: session.user.workspaceId 
+      },
       select: { workspaceId: true }
     })
 

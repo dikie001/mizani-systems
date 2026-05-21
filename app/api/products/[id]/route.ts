@@ -17,15 +17,18 @@ type RouteContext = {
 
 export async function GET(_request: Request, context: RouteContext) {
   const session = await auth()
-  if (!session?.user?.id) {
+  if (!session?.user?.id || !session.user.workspaceId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
   const { id } = await context.params
 
   try {
-    const product = await prisma.product.findUnique({
-      where: { id },
+    const product = await prisma.product.findFirst({
+      where: { 
+        id,
+        workspaceId: session.user.workspaceId 
+      },
       include: productQueryInclude(true),
     })
 
@@ -45,7 +48,7 @@ export async function GET(_request: Request, context: RouteContext) {
 
 export async function PUT(request: Request, context: RouteContext) {
   const session = await auth()
-  if (!session?.user?.id) {
+  if (!session?.user?.id || !session.user.workspaceId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
@@ -55,8 +58,11 @@ export async function PUT(request: Request, context: RouteContext) {
     const payload = normalizeProductPayload(await request.json())
 
     const product = await prisma.$transaction(async (tx) => {
-      const existingProduct = await tx.product.findUnique({
-        where: { id },
+      const existingProduct = await tx.product.findFirst({
+        where: { 
+          id,
+          workspaceId: session.user.workspaceId 
+        },
       })
 
       if (!existingProduct) {
@@ -173,7 +179,7 @@ export async function PUT(request: Request, context: RouteContext) {
 
 export async function DELETE(_request: Request, context: RouteContext) {
   const session = await auth()
-  if (!session?.user?.id) {
+  if (!session?.user?.id || !session.user.workspaceId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
@@ -181,8 +187,11 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const product = await tx.product.findUnique({
-        where: { id },
+      const product = await tx.product.findFirst({
+        where: { 
+          id,
+          workspaceId: session.user.workspaceId 
+        },
         include: {
           _count: {
             select: {
