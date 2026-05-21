@@ -480,7 +480,7 @@ export default function BulkImportPage() {
           </AlertDescription>
           <button
             onClick={() => setShowAlert(false)}
-            className="absolute right-3 top-3 rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
+            className="absolute top-3 right-3 rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
             aria-label="Dismiss"
           >
             <XCircle className="h-3.5 w-3.5" />
@@ -523,7 +523,7 @@ export default function BulkImportPage() {
               className={cn(
                 "flex min-h-44 cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed transition-all",
                 isDragging
-                  ? "border-primary bg-primary/5 scale-[1.01]"
+                  ? "scale-[1.01] border-primary bg-primary/5"
                   : "border-muted-foreground/25 hover:border-primary/40 hover:bg-muted/30"
               )}
             >
