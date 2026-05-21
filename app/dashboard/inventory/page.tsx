@@ -387,6 +387,8 @@ function InventoryPageContent() {
   )
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [currentPage, setCurrentPage] = useState(1)
+  const PAGE_SIZE = 25
 
   const [formMode, setFormMode] = useState<"create" | "edit">("create")
   const [formOpen, setFormOpen] = useState(false)
@@ -630,6 +632,11 @@ function InventoryPageContent() {
   }
 
   const [exporting, setExporting] = useState(false)
+
+  // Reset to page 1 whenever filters / search change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, categoryFilter, statusFilter])
 
   const beginCreate = useCallback(() => {
     setFormMode("create")
@@ -1130,7 +1137,11 @@ function InventoryPageContent() {
             <div>
               <CardTitle>Product Catalog</CardTitle>
               <CardDescription>
-                {isLoading ? "Loading..." : `${products?.length || 0} items`}
+                {isLoading
+                  ? "Loading..."
+                  : `${products?.length || 0} item${
+                      (products?.length ?? 0) !== 1 ? "s" : ""
+                    }`}
               </CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -1220,14 +1231,17 @@ function InventoryPageContent() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {products?.map((product, index) => (
+                {(products ?? []).slice(
+                  (currentPage - 1) * PAGE_SIZE,
+                  currentPage * PAGE_SIZE
+                ).map((product, index) => (
                   <TableRow
                     key={product.id}
                     className="group cursor-pointer transition-colors hover:bg-muted/30"
                     onClick={() => setDetailsProductId(product.id)}
                   >
                     <TableCell className="py-2.5 text-center font-mono text-xs text-muted-foreground/80">
-                      {index + 1}
+                      {(currentPage - 1) * PAGE_SIZE + index + 1}
                     </TableCell>
                     <TableCell className="py-2.5">
                       <div className="flex items-center gap-3">
@@ -1381,7 +1395,7 @@ function InventoryPageContent() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {products?.length === 0 ? (
+                {(products ?? []).length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="h-32 text-center">
                       <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
@@ -1404,6 +1418,96 @@ function InventoryPageContent() {
               </TableBody>
             </Table>
           )}
+
+          {/* Pagination */}
+          {!isLoading && !error && (products?.length ?? 0) > PAGE_SIZE && (() => {
+            const totalPages = Math.ceil((products?.length ?? 0) / PAGE_SIZE)
+            const from = (currentPage - 1) * PAGE_SIZE + 1
+            const to = Math.min(currentPage * PAGE_SIZE, products?.length ?? 0)
+            return (
+              <div className="flex items-center justify-between border-t border-border/40 pt-4 mt-2">
+                <p className="text-xs text-muted-foreground">
+                  Showing{" "}
+                  <span className="font-medium text-foreground">{from}–{to}</span>{" "}
+                  of{" "}
+                  <span className="font-medium text-foreground">{products?.length}</span>{" "}
+                  products
+                </p>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-2.5 text-xs"
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === 1}
+                  >
+                    «
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-2.5 text-xs"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    ‹ Prev
+                  </Button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter(
+                        (p) =>
+                          p === 1 ||
+                          p === totalPages ||
+                          Math.abs(p - currentPage) <= 1
+                      )
+                      .reduce<(number | "...")[]>((acc, p, idx, arr) => {
+                        if (idx > 0 && (p as number) - (arr[idx - 1] as number) > 1)
+                          acc.push("...")
+                        acc.push(p)
+                        return acc
+                      }, [])
+                      .map((p, i) =>
+                        p === "..." ? (
+                          <span key={`ellipsis-${i}`} className="px-1 text-xs text-muted-foreground">
+                            …
+                          </span>
+                        ) : (
+                          <Button
+                            key={p}
+                            variant={currentPage === p ? "default" : "outline"}
+                            size="sm"
+                            className="h-8 w-8 p-0 text-xs"
+                            onClick={() => setCurrentPage(p as number)}
+                          >
+                            {p}
+                          </Button>
+                        )
+                      )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-2.5 text-xs"
+                    onClick={() =>
+                      setCurrentPage((p) => Math.min(totalPages, p + 1))
+                    }
+                    disabled={currentPage === totalPages}
+                  >
+                    Next ›
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-2.5 text-xs"
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={currentPage === totalPages}
+                  >
+                    »
+                  </Button>
+                </div>
+              </div>
+            )
+          })()}
         </CardContent>
       </Card>
 
