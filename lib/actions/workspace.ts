@@ -104,7 +104,7 @@ export async function createWorkspace(data: {
   const rateLimitDecision = evaluateRateLimit({
     headers: requestHeaders,
     nextUrl: {
-      pathname: "/dashboard/billing",
+      pathname: "/dashboard/settings",
     },
   })
 
@@ -237,32 +237,52 @@ export async function createWorkspace(data: {
         },
       })
 
-      // Check if user already has an existing workspace with a subscription
+      // Check if the user already owns a workspace that has an active subscription.
+      // We use the Prisma relation (Subscription.workspaceId) — not the plain
+      // Workspace.subscriptionId field — so the lookup is always accurate.
       const existingWorkspaceWithSub = await tx.workspace.findFirst({
         where: {
+          id: { not: newWorkspace.id },
           members: {
             some: {
               userId: userId,
               role: "OWNER",
             },
           },
-          subscriptionId: { not: null },
+          subscription: { isNot: null },
         },
         include: {
           subscription: true,
         },
       })
 
-      // If user has an existing subscription, link the new workspace to it
-      // This ensures all workspaces under one admin share the same billing
-      if (existingWorkspaceWithSub?.subscriptionId) {
+      if (existingWorkspaceWithSub?.subscription) {
+        // Mirror the existing subscription onto the new workspace so the
+        // dashboard layout finds an active subscription and doesn't redirect
+        // the user to the billing page.
+        const existingSub = existingWorkspaceWithSub.subscription
+        const newSub = await tx.subscription.create({
+          data: {
+            workspaceId: newWorkspace.id,
+            planId: existingSub.planId,
+            status: existingSub.status,
+            paymentStatus: existingSub.paymentStatus,
+            currentBillingCycleStart: existingSub.currentBillingCycleStart,
+            currentBillingCycleEnd: existingSub.currentBillingCycleEnd,
+            nextBillingDate: existingSub.nextBillingDate,
+          },
+        })
+
         await tx.workspace.update({
           where: { id: newWorkspace.id },
-          data: { subscriptionId: existingWorkspaceWithSub.subscriptionId },
+          data: {
+            subscriptionId: newSub.id,
+            selectedPlanId: dbPlan?.id ?? existingSub.planId,
+          },
         })
       } else {
-        // Only create a subscription for the first workspace (trial/free plans)
-        // Paid plans must go through Paystack — the subscription is created
+        // First workspace — create a trial subscription for free plans.
+        // Paid plans must go through Paystack; the subscription is created
         // by the payment verify route once payment is confirmed.
         if (dbPlan && staticPlan?.monthlyPrice === 0) {
           const subscription = await tx.subscription.create({

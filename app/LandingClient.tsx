@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { ImageWithSpinner } from "@/components/image-with-spinner"
 import type { Session } from "next-auth"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import {
   ArrowRight,
   Check,
@@ -12,13 +13,18 @@ import {
   Layers,
   Smartphone,
   Shield,
-  Database,
   TrendingUp,
   Users,
-  Package,
   Menu,
   X,
 } from "lucide-react"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetClose,
+} from "@/components/ui/sheet"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -33,19 +39,21 @@ import {
 } from "@/components/ui/table"
 import { Separator } from "@/components/ui/separator"
 import PricingSection from "./landing/pricing.section"
-import { BookDemoModal, ContactSalesModal } from "@/components/landing/lead-modals"
+import {
+  BookDemoModal,
+  ContactSalesModal,
+} from "@/components/landing/lead-modals"
 
 // ─── Animation Variants ──────────────────────────────────────────────────────
 
 const ease = [0.25, 0.46, 0.45, 0.94] as const
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 20, filter: "blur(6px)" },
+  hidden: { opacity: 0, y: 18 },
   visible: (delay: number = 0) => ({
     opacity: 1,
     y: 0,
-    filter: "blur(0px)",
-    transition: { duration: 0.65, delay, ease },
+    transition: { duration: 0.55, delay, ease },
   }),
 }
 
@@ -128,41 +136,50 @@ function HeroBackground() {
 function Navbar({ session }: { session: Session | null }) {
   const [isOpen, setIsOpen] = useState(false)
 
+  const navLinks = ["Features", "Pricing", "About"]
+
   return (
-    <motion.header
-      initial={{ opacity: 0, y: -12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease }}
-      className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/80 backdrop-blur-xl"
-    >
-      <div className="container mx-auto flex h-14 items-center justify-between px-6">
-        <Link
-          href="/"
-          className="flex items-center gap-2.5 text-[15px] font-semibold tracking-tight whitespace-nowrap shrink-0"
-        >
-          <ImageWithSpinner
-            src="/mizani_logo.png"
-            alt="Mizani Systems"
-            width={32}
-            height={32}
-            className="h-8 w-8 rounded-lg border border-border shadow-sm"
-          />
-          <span>Mizani Systems</span>
-        </Link>
+    <>
+      <motion.header
+        initial={{ opacity: 0, y: -12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease }}
+        className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/80 backdrop-blur-xl"
+      >
+        <div className="container mx-auto flex h-14 items-center justify-between px-4 sm:px-6">
+          {/* Logo */}
+          <Link
+            href="/"
+            className="flex shrink-0 items-center gap-2.5 text-[15px] font-semibold tracking-tight whitespace-nowrap"
+          >
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+              <Image
+                src="/mizani_logo.png"
+                alt="Mizani"
+                width={32}
+                height={32}
+                className="h-full w-full object-contain"
+                priority
+              />
+            </div>
+            <span className="hidden sm:inline">Mizani Systems</span>
+            <span className="sm:hidden">Mizani</span>
+          </Link>
 
-        <nav className="hidden items-center gap-7 text-sm text-muted-foreground md:flex">
-          {["Features", "Pricing", "About"].map((item) => (
-            <Link
-              key={item}
-              href={`#${item.toLowerCase()}`}
-              className="transition-colors duration-150 hover:text-foreground"
-            >
-              {item}
-            </Link>
-          ))}
-        </nav>
+          {/* Desktop nav */}
+          <nav className="hidden items-center gap-7 text-sm text-muted-foreground md:flex">
+            {navLinks.map((item) => (
+              <Link
+                key={item}
+                href={`#${item.toLowerCase()}`}
+                className="transition-colors duration-150 hover:text-foreground"
+              >
+                {item}
+              </Link>
+            ))}
+          </nav>
 
-        <div className="flex items-center gap-3">
+          {/* Desktop CTA */}
           <div className="hidden items-center gap-3 md:flex">
             {session ? (
               <Button size="sm" asChild>
@@ -172,11 +189,7 @@ function Navbar({ session }: { session: Session | null }) {
               </Button>
             ) : (
               <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  asChild
-                >
+                <Button variant="ghost" size="sm" asChild>
                   <Link href="/auth">Sign in</Link>
                 </Button>
                 <Button size="sm" asChild>
@@ -186,60 +199,83 @@ function Navbar({ session }: { session: Session | null }) {
             )}
           </div>
 
+          {/* Mobile hamburger */}
           <Button
             variant="ghost"
             size="icon"
             className="h-9 w-9 rounded-lg md:hidden"
-            onClick={() => setIsOpen(!isOpen)}
+            onClick={() => setIsOpen(true)}
+            aria-label="Open menu"
           >
-            {isOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            <Menu className="h-5 w-5" />
           </Button>
         </div>
-      </div>
+      </motion.header>
 
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          className="border-t border-border/50 bg-background/95 backdrop-blur-lg md:hidden"
-        >
-          <div className="flex flex-col gap-4 px-6 py-6">
-            {["Features", "Pricing", "About"].map((item) => (
+      {/* Mobile drawer */}
+      <Sheet open={isOpen} onOpenChange={setIsOpen}>
+        <SheetContent side="right" className="flex w-72 flex-col p-0">
+          <SheetHeader className="border-b border-border/60 px-5 py-4">
+            <SheetTitle asChild>
               <Link
-                key={item}
-                href={`#${item.toLowerCase()}`}
+                href="/"
                 onClick={() => setIsOpen(false)}
-                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                className="flex items-center gap-2.5 text-[15px] font-semibold tracking-tight"
               >
-                {item}
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+                  <Image
+                    src="/mizani_logo.png"
+                    alt="Mizani"
+                    width={28}
+                    height={28}
+                    className="h-full w-full object-contain"
+                  />
+                </div>
+                Mizani Systems
               </Link>
-            ))}
-            <div className="my-1 border-t border-border/40" />
-            {session ? (
-              <Button size="sm" className="w-full justify-center" asChild>
-                <Link href="/dashboard" onClick={() => setIsOpen(false)}>
-                  Dashboard <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-                </Link>
-              </Button>
-            ) : (
-              <div className="flex flex-col gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-center"
-                  asChild
+            </SheetTitle>
+          </SheetHeader>
+
+          <nav className="flex flex-1 flex-col gap-1 px-3 py-4">
+            {navLinks.map((item) => (
+              <SheetClose key={item} asChild>
+                <Link
+                  href={`#${item.toLowerCase()}`}
+                  className="flex h-11 items-center rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
-                  <Link href="/auth" onClick={() => setIsOpen(false)}>Sign in</Link>
+                  {item}
+                </Link>
+              </SheetClose>
+            ))}
+          </nav>
+
+          <div className="space-y-2 border-t border-border/60 px-4 py-5">
+            {session ? (
+              <SheetClose asChild>
+                <Button className="w-full" asChild>
+                  <Link href="/dashboard">
+                    Dashboard <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                  </Link>
                 </Button>
-                <Button size="sm" className="w-full justify-center" asChild>
-                  <Link href="/auth" onClick={() => setIsOpen(false)}>Get started</Link>
-                </Button>
-              </div>
+              </SheetClose>
+            ) : (
+              <>
+                <SheetClose asChild>
+                  <Button variant="outline" className="w-full" asChild>
+                    <Link href="/auth">Sign in</Link>
+                  </Button>
+                </SheetClose>
+                <SheetClose asChild>
+                  <Button className="w-full" asChild>
+                    <Link href="/auth">Get started</Link>
+                  </Button>
+                </SheetClose>
+              </>
             )}
           </div>
-        </motion.div>
-      )}
-    </motion.header>
+        </SheetContent>
+      </Sheet>
+    </>
   )
 }
 
@@ -282,7 +318,13 @@ const STATUS_COLOR: Record<string, string> = {
   "Out of Stock": "bg-red-500/10    text-red-700    dark:text-red-400",
 }
 
-function HeroSection({ session, onBookDemo }: { session: Session | null; onBookDemo: () => void }) {
+function HeroSection({
+  session,
+  onBookDemo,
+}: {
+  session: Session | null
+  onBookDemo: () => void
+}) {
   return (
     <section className="relative overflow-hidden bg-background pt-20 pb-28 md:pt-28 md:pb-36">
       <HeroBackground />
@@ -298,10 +340,9 @@ function HeroSection({ session, onBookDemo }: { session: Session | null; onBookD
           <motion.h1
             variants={fadeUp}
             custom={0.08}
-            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl leading-[1.1] font-bold tracking-tight text-foreground"
+            className="text-3xl leading-[1.1] font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl lg:text-6xl"
           >
-            Inventory tracking built{" "}
-            <br className="hidden sm:inline" />
+            Inventory tracking built <br className="hidden sm:inline" />
             <span className="font-normal text-muted-foreground">
               for the modern enterprise
             </span>
@@ -310,7 +351,7 @@ function HeroSection({ session, onBookDemo }: { session: Session | null; onBookD
           <motion.p
             variants={fadeUp}
             custom={0.16}
-            className="mx-auto mt-4 max-w-xl text-sm sm:text-base md:text-[1.05rem] leading-relaxed text-muted-foreground px-4 sm:px-0"
+            className="mx-auto mt-4 max-w-xl px-4 text-sm leading-relaxed text-muted-foreground sm:px-0 sm:text-base md:text-[1.05rem]"
           >
             Monitor stock levels, automate replenishment, and surface insights
             across your entire catalog — all in one place.
@@ -395,15 +436,21 @@ function HeroSection({ session, onBookDemo }: { session: Session | null; onBookD
                       key={row.name}
                       initial={{ opacity: 0, x: -8 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.4, delay: 0.55 + i * 0.07, ease }}
-                      className="border-border/40 transition-colors hover:bg-muted/30 whitespace-nowrap"
+                      transition={{
+                        duration: 0.4,
+                        delay: 0.55 + i * 0.07,
+                        ease,
+                      }}
+                      className="border-border/40 whitespace-nowrap transition-colors hover:bg-muted/30"
                     >
                       <TableCell className="py-3.5 pl-5">
                         <div className="flex items-center gap-3">
                           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-bold text-foreground/70">
                             {row.name.charAt(0)}
                           </div>
-                          <span className="text-sm font-medium">{row.name}</span>
+                          <span className="text-sm font-medium">
+                            {row.name}
+                          </span>
                         </div>
                       </TableCell>
                       <TableCell className="py-3.5">
@@ -527,14 +574,14 @@ function FeatureSection() {
         >
           {FEATURES.map((f, i) => (
             <motion.div key={f.title} variants={fadeUp} custom={i * 0.05}>
-              <Card className="group h-full border border-border/60 bg-card/80 transition-all duration-200 hover:bg-card hover:shadow-md relative overflow-hidden">
+              <Card className="group relative h-full overflow-hidden border border-border/60 bg-card/80 transition-all duration-200 hover:bg-card hover:shadow-md">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-lg border border-border/60 bg-muted transition-all duration-200 group-hover:border-primary/30 group-hover:bg-primary/5">
                       <f.icon className="h-4 w-4 text-muted-foreground transition-colors duration-200 group-hover:text-primary" />
                     </div>
                     {"comingSoon" in f && f.comingSoon && (
-                      <span className="mb-4 rounded-full bg-primary/10 border border-primary/20 px-2 py-0.5 text-[9px] font-bold tracking-wider text-primary uppercase">
+                      <span className="mb-4 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[9px] font-bold tracking-wider text-primary uppercase">
                         Coming Soon
                       </span>
                     )}
@@ -695,7 +742,7 @@ function ManageSection() {
                 ].map((row) => (
                   <TableRow
                     key={row.name}
-                    className="border-border/40 transition-colors hover:bg-muted/30 whitespace-nowrap"
+                    className="border-border/40 whitespace-nowrap transition-colors hover:bg-muted/30"
                   >
                     <TableCell className="py-3.5 pl-5 text-sm font-medium">
                       {row.name}
@@ -923,14 +970,16 @@ function Footer() {
       <div className="container mx-auto px-6 py-10">
         <div className="flex flex-col items-start justify-between gap-8 md:flex-row md:items-center">
           <div>
-            <div className="mb-2 flex items-center gap-2.5 text-sm font-semibold whitespace-nowrap shrink-0">
-              <ImageWithSpinner
-                src="/mizani_logo.png"
-                alt="Mizani Systems"
-                width={28}
-                height={28}
-                className="h-7 w-7 rounded-lg border border-border shadow-sm"
-              />
+            <div className="mb-2 flex shrink-0 items-center gap-2.5 text-sm font-semibold whitespace-nowrap">
+              <div className="rounded- flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden border border-border bg-card shadow-sm">
+                <Image
+                  src="/mizani_logo.png"
+                  alt="Mizani"
+                  width={28}
+                  height={28}
+                  className="h-full w-full object-contain"
+                />
+              </div>
               Mizani Systems
             </div>
             <p className="max-w-xs text-xs leading-relaxed text-muted-foreground">
@@ -959,7 +1008,13 @@ function Footer() {
                   {links.map((l) => (
                     <li key={l}>
                       <Link
-                        href={l === "Privacy" ? "/privacy" : l === "Terms" ? "/terms" : "#"}
+                        href={
+                          l === "Privacy"
+                            ? "/privacy"
+                            : l === "Terms"
+                              ? "/terms"
+                              : "#"
+                        }
                         className="text-xs text-muted-foreground transition-colors hover:text-foreground"
                       >
                         {l}
@@ -994,6 +1049,52 @@ function Footer() {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+// ─── Branded page loader ─────────────────────────────────────────────────────
+
+function PageLoader() {
+  return (
+    <motion.div
+      key="page-loader"
+      initial={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.45, ease: "easeInOut" }}
+      className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background"
+    >
+      {/* Custom spinner */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.35, ease }}
+        className="relative flex items-center justify-center"
+      >
+        {/* Outer ring */}
+        <svg
+          className="h-14 w-14 animate-spin"
+          viewBox="0 0 56 56"
+          fill="none"
+          aria-hidden
+        >
+          <circle
+            cx="28"
+            cy="28"
+            r="22"
+            stroke="hsl(var(--primary) / 0.15)"
+            strokeWidth="4"
+          />
+          <path
+            d="M28 6 a22 22 0 0 1 22 22"
+            stroke="hsl(var(--primary))"
+            strokeWidth="4"
+            strokeLinecap="round"
+          />
+        </svg>
+        {/* Inner pulsing dot */}
+        <span className="absolute h-3 w-3 animate-pulse rounded-full bg-primary/70" />
+      </motion.div>
+    </motion.div>
+  )
+}
+
 export default function LandingClient({
   session,
 }: {
@@ -1001,20 +1102,46 @@ export default function LandingClient({
 }) {
   const [isDemoOpen, setIsDemoOpen] = useState(false)
   const [isContactOpen, setIsContactOpen] = useState(false)
+  const [showLoader, setShowLoader] = useState(true)
+
+  useEffect(() => {
+    const t = setTimeout(() => setShowLoader(false), 50)
+    return () => clearTimeout(t)
+  }, [])
 
   return (
     <div className="min-h-screen bg-background text-foreground antialiased selection:bg-primary/15">
-      <Navbar session={session} />
-      <main>
-        <HeroSection session={session} onBookDemo={() => setIsDemoOpen(true)} />
-        <FeatureSection />
-        <ManageSection />
-        <PricingSection onContactSales={() => setIsContactOpen(true)} />
-      </main>
-      <Footer />
+      {/* AnimatePresence here so exit animation on PageLoader actually runs */}
+      <AnimatePresence>
+        {showLoader && <PageLoader key="page-loader" />}
+      </AnimatePresence>
+
+      <div
+        style={{
+          opacity: showLoader ? 0 : 1,
+          transition: "opacity 0.45s ease",
+          // keep it out of the accessibility tree while hidden
+          visibility: showLoader ? "hidden" : "visible",
+        }}
+      >
+        <Navbar session={session} />
+        <main>
+          <HeroSection
+            session={session}
+            onBookDemo={() => setIsDemoOpen(true)}
+          />
+          <FeatureSection />
+          <ManageSection />
+          <PricingSection onContactSales={() => setIsContactOpen(true)} />
+        </main>
+        <Footer />
+      </div>
 
       <BookDemoModal isOpen={isDemoOpen} onClose={() => setIsDemoOpen(false)} />
-      <ContactSalesModal isOpen={isContactOpen} onClose={() => setIsContactOpen(false)} />
+      <ContactSalesModal
+        isOpen={isContactOpen}
+        onClose={() => setIsContactOpen(false)}
+      />
     </div>
   )
 }

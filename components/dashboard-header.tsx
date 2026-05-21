@@ -165,20 +165,21 @@ export function DashboardHeader() {
     status === "authenticated" && Boolean(userName) && isAvatarReady
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b border-border/60 bg-background/95 px-4 backdrop-blur supports-backdrop-filter:bg-background/85 md:px-5">
-      <SidebarTrigger className="-ml-1 transition-all duration-200 ease-linear peer-data-[state=expanded]:peer-data-[collapsible=icon]:fixed peer-data-[state=expanded]:peer-data-[collapsible=icon]:top-3 peer-data-[state=expanded]:peer-data-[collapsible=icon]:left-[calc(var(--sidebar-width)-2.5rem)] peer-data-[state=expanded]:peer-data-[collapsible=icon]:z-40" />
+    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-border/60 bg-background/95 px-3 backdrop-blur supports-backdrop-filter:bg-background/85 sm:h-16 sm:gap-3 sm:px-4 md:px-5">
+      <SidebarTrigger className="-ml-1 shrink-0 transition-all duration-200 ease-linear peer-data-[state=expanded]:peer-data-[collapsible=icon]:fixed peer-data-[state=expanded]:peer-data-[collapsible=icon]:top-3 peer-data-[state=expanded]:peer-data-[collapsible=icon]:left-[calc(var(--sidebar-width)-2.5rem)] peer-data-[state=expanded]:peer-data-[collapsible=icon]:z-40" />
       <Separator
         orientation="vertical"
-        className="mr-1 h-5 peer-data-[state=expanded]:peer-data-[collapsible=icon]:hidden"
+        className="mr-0.5 h-4 peer-data-[state=expanded]:peer-data-[collapsible=icon]:hidden sm:h-5"
       />
 
       <nav
         aria-label="Breadcrumb"
-        className="flex min-w-0 items-center gap-1 text-sm"
+        className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-sm"
       >
+        {/* On mobile show only the current (last) segment; on sm+ show full path */}
         <Link
           href="/dashboard"
-          className="truncate text-muted-foreground transition-colors hover:text-foreground"
+          className="hidden truncate text-muted-foreground transition-colors hover:text-foreground sm:block"
         >
           Dashboard
         </Link>
@@ -186,8 +187,16 @@ export function DashboardHeader() {
           const isLast = index === breadcrumbSegments.length - 1
 
           return (
-            <div key={item.href} className="flex min-w-0 items-center gap-1">
-              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
+            <div
+              key={item.href}
+              className={`flex min-w-0 items-center gap-1 ${
+                !isLast ? "hidden sm:flex" : ""
+              }`}
+            >
+              {/* Separator only shown on sm+ for non-last, always for last */}
+              <ChevronRight
+                className={`h-3.5 w-3.5 shrink-0 text-muted-foreground/50 ${!isLast ? "hidden sm:block" : "hidden sm:block"}`}
+              />
               {isLast ? (
                 <span className="truncate font-medium text-foreground">
                   {item.label}

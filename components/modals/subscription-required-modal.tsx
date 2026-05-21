@@ -203,6 +203,7 @@ export function SubscriptionRequiredModal({
           setIsConfirmOpen(open)
           if (!open) {
             setPendingPayment(null)
+            setIsLoading(null)
           }
         }}
       >
