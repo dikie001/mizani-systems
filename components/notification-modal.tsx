@@ -24,7 +24,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 
-const fetcher = async (url: string) => {
+const fetcher = async (key: string | [string, string]) => {
+  const url = Array.isArray(key) ? key[0] : key
   const res = await fetch(url)
   if (!res.ok) {
     const errorMsg = await res

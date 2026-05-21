@@ -170,7 +170,8 @@ type StockAdjustmentValues = {
   quantity: string
 }
 
-const fetcher = async <T,>(url: string): Promise<T> => {
+const fetcher = async <T,>(key: string | [string, string]): Promise<T> => {
+  const url = Array.isArray(key) ? key[0] : key
   const response = await fetch(url)
   const payload = await response.json().catch(() => null)
 

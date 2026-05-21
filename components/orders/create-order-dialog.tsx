@@ -59,7 +59,8 @@ export function CreateOrderDialog({
   const { mutate } = useSWRConfig()
   const { data: workspace } = useSWR<WorkspaceSummary>(
     workspaceId ? ["/api/workspaces/current", workspaceId] : null,
-    async (url: string) => {
+    async (key: string | [string, string]) => {
+      const url = Array.isArray(key) ? key[0] : key
       const res = await fetch(url)
       if (!res.ok) {
         const errorMsg = await res

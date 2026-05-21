@@ -81,7 +81,8 @@ type TopProduct = {
   units: number
 }
 
-const fetcher = async (url: string) => {
+const fetcher = async (key: string | [string, string]) => {
+  const url = Array.isArray(key) ? key[0] : key
   const response = await fetch(url)
   const data = await response.json()
 

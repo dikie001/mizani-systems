@@ -35,7 +35,8 @@ type AlertItem = {
   severity: "critical" | "warning" | string
 }
 
-const fetcher = async (url: string) => {
+const fetcher = async (key: string | [string, string]) => {
+  const url = Array.isArray(key) ? key[0] : key
   const response = await fetch(url)
   if (!response.ok) {
     throw new Error("Request failed")

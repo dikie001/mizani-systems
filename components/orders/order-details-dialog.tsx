@@ -39,7 +39,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
-const fetcher = async (url: string) => {
+const fetcher = async (key: string | [string, string]) => {
+  const url = Array.isArray(key) ? key[0] : key
   const res = await fetch(url)
   if (!res.ok) {
     const errorMsg = await res

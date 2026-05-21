@@ -81,7 +81,10 @@ export function WorkspaceSwitcher() {
     }
   }, [session?.user?.id, currentWorkspaceId, open, status])
 
-  if (status === "loading") {
+  // Show loader when session is loading OR when workspaces are loading and we don't have a workspace name
+  const showLoadingState = status === "loading" || (isLoading && !session?.user?.workspaceName)
+  
+  if (showLoadingState) {
     return (
       <div
         className={cn(

@@ -37,7 +37,8 @@ import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 
-const fetcher = async (url: string) => {
+const fetcher = async (key: string | [string, string]) => {
+  const url = Array.isArray(key) ? key[0] : key
   const res = await fetch(url)
   if (!res.ok) {
     const errorMsg = await res
