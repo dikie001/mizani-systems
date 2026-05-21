@@ -128,7 +128,9 @@ export default function ReportsPage() {
     error: statsError,
     isLoading: statsLoading,
   } = useSWR(
-    workspaceId ? [`/api/dashboard/reports/stats?range=${range}`, workspaceId] : null,
+    workspaceId
+      ? [`/api/dashboard/reports/stats?range=${range}`, workspaceId]
+      : null,
     fetcher
   )
   const {
@@ -144,7 +146,9 @@ export default function ReportsPage() {
     error: categoryError,
     isLoading: catLoading,
   } = useSWR(
-    workspaceId ? [`/api/dashboard/categories?range=${range}`, workspaceId] : null,
+    workspaceId
+      ? [`/api/dashboard/categories?range=${range}`, workspaceId]
+      : null,
     fetcher
   )
   const {
@@ -152,7 +156,9 @@ export default function ReportsPage() {
     error: topProductsError,
     isLoading: topLoading,
   } = useSWR(
-    workspaceId ? [`/api/dashboard/reports/top-products?range=${range}`, workspaceId] : null,
+    workspaceId
+      ? [`/api/dashboard/reports/top-products?range=${range}`, workspaceId]
+      : null,
     fetcher
   )
   const { data: workspace } = useSWR<WorkspaceSummary>(

@@ -94,7 +94,10 @@ type CategoryStat = {
 const fetcher = async (url: string) => {
   const res = await fetch(url)
   if (!res.ok) {
-    const errorMsg = await res.json().catch(() => ({})).then((data) => data.error || "An error occurred")
+    const errorMsg = await res
+      .json()
+      .catch(() => ({}))
+      .then((data) => data.error || "An error occurred")
     throw new Error(errorMsg)
   }
   return res.json()
@@ -127,7 +130,9 @@ export default function DashboardPage() {
     fetcher
   )
   const { data: revenueData, isLoading: revLoading } = useSWR(
-    workspaceId ? [`/api/dashboard/revenue?interval=${viewInterval}`, workspaceId] : null,
+    workspaceId
+      ? [`/api/dashboard/revenue?interval=${viewInterval}`, workspaceId]
+      : null,
     fetcher
   )
   const { data: categoryData, isLoading: catLoading } = useSWR(
@@ -143,9 +148,15 @@ export default function DashboardPage() {
     fetcher
   )
 
-  const lowStockItems = Array.isArray(lowStockData) ? (lowStockData as LowStockItem[]) : []
-  const recentActivity = Array.isArray(activityData) ? (activityData as ActivityItem[]) : []
-  const categories = Array.isArray(categoryData) ? (categoryData as CategoryStat[]) : []
+  const lowStockItems = Array.isArray(lowStockData)
+    ? (lowStockData as LowStockItem[])
+    : []
+  const recentActivity = Array.isArray(activityData)
+    ? (activityData as ActivityItem[])
+    : []
+  const categories = Array.isArray(categoryData)
+    ? (categoryData as CategoryStat[])
+    : []
   const revenue = Array.isArray(revenueData) ? revenueData : []
 
   // Dynamic formatting for Revenue YAxis ticks without repeating currency prefix

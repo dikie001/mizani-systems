@@ -40,7 +40,10 @@ import { SidebarTrigger } from "@/components/ui/sidebar"
 const fetcher = async (url: string) => {
   const res = await fetch(url)
   if (!res.ok) {
-    const errorMsg = await res.json().catch(() => ({})).then((data) => data.error || "An error occurred")
+    const errorMsg = await res
+      .json()
+      .catch(() => ({}))
+      .then((data) => data.error || "An error occurred")
     throw new Error(errorMsg)
   }
   return res.json()
@@ -228,7 +231,7 @@ export function DashboardHeader() {
           <DropdownMenuTrigger asChild disabled={!isProfileReady}>
             <Button
               variant="ghost"
-              className="h-8 w-8 p-0 rounded-full bg-transparent border-none shadow-none hover:bg-transparent md:h-11 md:w-auto md:px-2.5 md:border md:border-border/70 md:bg-background md:shadow-sm md:hover:bg-muted/40 disabled:cursor-wait disabled:opacity-100"
+              className="h-8 w-8 rounded-full border-none bg-transparent p-0 shadow-none hover:bg-transparent disabled:cursor-wait disabled:opacity-100 md:h-11 md:w-auto md:border md:border-border/70 md:bg-background md:px-2.5 md:shadow-sm md:hover:bg-muted/40"
             >
               {isProfileReady ? (
                 <>
@@ -254,7 +257,7 @@ export function DashboardHeader() {
                   className="flex items-center justify-center gap-2 text-xs font-medium text-muted-foreground"
                   style={{ width: "7.5rem" }}
                 >
-                  <LoaderCircle className="h-4 w-4 animate-spin text-primary shrink-0" />
+                  <LoaderCircle className="h-4 w-4 shrink-0 animate-spin text-primary" />
                   <span>Loading...</span>
                 </span>
               )}

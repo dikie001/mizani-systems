@@ -72,7 +72,10 @@ type WorkspaceMember = {
 const fetcher = async (url: string) => {
   const res = await fetch(url)
   if (!res.ok) {
-    const errorMsg = await res.json().catch(() => ({})).then((data) => data.error || "An error occurred")
+    const errorMsg = await res
+      .json()
+      .catch(() => ({}))
+      .then((data) => data.error || "An error occurred")
     throw new Error(errorMsg)
   }
   return res.json()
@@ -87,10 +90,7 @@ export default function SettingsPage() {
   )
   const { data: members, isLoading: membersLoading } = useSWR<
     WorkspaceMember[]
-  >(
-    workspaceId ? ["/api/workspaces/members", workspaceId] : null,
-    fetcher
-  )
+  >(workspaceId ? ["/api/workspaces/members", workspaceId] : null, fetcher)
 
   const [isUpdatingWorkspace, setIsUpdatingWorkspace] = React.useState(false)
   const [workspaceForm, setWorkspaceForm] = React.useState({
@@ -339,7 +339,10 @@ export default function SettingsPage() {
               {membersLoading ? (
                 <div className="space-y-3.5 py-1">
                   {[...Array(3)].map((_, idx) => (
-                    <div key={idx} className="flex items-center justify-between border-b border-border/40 pb-3 pt-3 last:border-b-0 last:pb-0">
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between border-b border-border/40 pt-3 pb-3 last:border-b-0 last:pb-0"
+                    >
                       <div className="flex items-center gap-3">
                         <Skeleton className="h-9 w-9 rounded-full bg-muted/70" />
                         <div className="space-y-1.5">
@@ -347,7 +350,7 @@ export default function SettingsPage() {
                           <Skeleton className="h-3 w-44 bg-muted/50" />
                         </div>
                       </div>
-                      <div className="flex gap-4 items-center">
+                      <div className="flex items-center gap-4">
                         <Skeleton className="h-6 w-16 rounded-full bg-muted/60" />
                         <Skeleton className="h-8 w-8 rounded bg-muted/50" />
                       </div>

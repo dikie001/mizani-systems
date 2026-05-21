@@ -236,9 +236,9 @@ export default function AlertsPage() {
                 <Card key={idx}>
                   <CardContent className="pt-4">
                     <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3 w-full">
-                        <Skeleton className="h-10 w-10 rounded-lg shrink-0 bg-muted/70" />
-                        <div className="space-y-1.5 flex-1">
+                      <div className="flex w-full items-start gap-3">
+                        <Skeleton className="h-10 w-10 shrink-0 rounded-lg bg-muted/70" />
+                        <div className="flex-1 space-y-1.5">
                           <Skeleton className="h-4 w-3/4 bg-muted/70" />
                           <Skeleton className="h-3 w-1/2 bg-muted/50" />
                         </div>

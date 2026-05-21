@@ -42,7 +42,10 @@ import {
 const fetcher = async (url: string) => {
   const res = await fetch(url)
   if (!res.ok) {
-    const errorMsg = await res.json().catch(() => ({})).then((data) => data.error || "An error occurred")
+    const errorMsg = await res
+      .json()
+      .catch(() => ({}))
+      .then((data) => data.error || "An error occurred")
     throw new Error(errorMsg)
   }
   return res.json()
@@ -153,7 +156,7 @@ export function OrderDetailsDialog({
         </DialogHeader>
 
         {isLoading ? (
-          <div className="space-y-6 pt-4 animate-pulse">
+          <div className="animate-pulse space-y-6 pt-4">
             {/* Metadata Preview Box Skeleton */}
             <div className="grid grid-cols-2 gap-4 rounded-xl border bg-muted/5 p-4">
               {[...Array(4)].map((_, idx) => (
@@ -163,19 +166,22 @@ export function OrderDetailsDialog({
                 </div>
               ))}
             </div>
-            
+
             {/* Items Table Title Skeleton */}
             <div className="space-y-2">
               <Skeleton className="h-4 w-28 bg-muted/70" />
               <div className="rounded-lg border">
-                <div className="border-b p-3 flex justify-between">
+                <div className="flex justify-between border-b p-3">
                   <Skeleton className="h-3 w-20 bg-muted/50" />
                   <Skeleton className="h-3 w-12 bg-muted/50" />
                   <Skeleton className="h-3 w-12 bg-muted/50" />
                 </div>
                 {[...Array(3)].map((_, idx) => (
-                  <div key={idx} className="p-3 flex justify-between items-center border-b last:border-b-0">
-                    <div className="space-y-1.5 flex-1">
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between border-b p-3 last:border-b-0"
+                  >
+                    <div className="flex-1 space-y-1.5">
                       <Skeleton className="h-4 w-3/4 bg-muted/70" />
                       <Skeleton className="h-3 w-1/3 bg-muted/50" />
                     </div>
@@ -187,7 +193,7 @@ export function OrderDetailsDialog({
             </div>
 
             {/* Total Skeleton */}
-            <div className="flex justify-between items-center pt-2">
+            <div className="flex items-center justify-between pt-2">
               <Skeleton className="h-4 w-16 bg-muted/60" />
               <Skeleton className="h-5 w-24 bg-muted/80" />
             </div>

@@ -62,7 +62,10 @@ export function CreateOrderDialog({
     async (url: string) => {
       const res = await fetch(url)
       if (!res.ok) {
-        const errorMsg = await res.json().catch(() => ({})).then((data) => data.error || "An error occurred")
+        const errorMsg = await res
+          .json()
+          .catch(() => ({}))
+          .then((data) => data.error || "An error occurred")
         throw new Error(errorMsg)
       }
       return res.json()
@@ -221,10 +224,13 @@ export function CreateOrderDialog({
               <div className="max-h-[140px] space-y-0.5 divide-y divide-border/20 overflow-y-auto pr-1">
                 {productsLoading ? (
                   [...Array(3)].map((_, idx) => (
-                    <div key={idx} className="flex w-full items-center justify-between py-1.5 px-2 animate-pulse">
+                    <div
+                      key={idx}
+                      className="flex w-full animate-pulse items-center justify-between px-2 py-1.5"
+                    >
                       <div className="flex items-center gap-3">
-                        <Skeleton className="h-8 w-8 rounded-md bg-muted/70 shrink-0" />
-                        <div className="space-y-1.5 flex-1">
+                        <Skeleton className="h-8 w-8 shrink-0 rounded-md bg-muted/70" />
+                        <div className="flex-1 space-y-1.5">
                           <Skeleton className="h-3 w-28 bg-muted/70" />
                           <Skeleton className="h-2.5 w-16 bg-muted/50" />
                         </div>
