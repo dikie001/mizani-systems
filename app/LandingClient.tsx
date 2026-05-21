@@ -39,7 +39,10 @@ import {
 } from "@/components/ui/table"
 import { Separator } from "@/components/ui/separator"
 import PricingSection from "./landing/pricing.section"
-import { BookDemoModal, ContactSalesModal } from "@/components/landing/lead-modals"
+import {
+  BookDemoModal,
+  ContactSalesModal,
+} from "@/components/landing/lead-modals"
 
 // ─── Animation Variants ──────────────────────────────────────────────────────
 
@@ -147,14 +150,14 @@ function Navbar({ session }: { session: Session | null }) {
           {/* Logo */}
           <Link
             href="/"
-            className="flex items-center gap-2.5 text-[15px] font-semibold tracking-tight whitespace-nowrap shrink-0"
+            className="flex shrink-0 items-center gap-2.5 text-[15px] font-semibold tracking-tight whitespace-nowrap"
           >
             <div className="relative h-8 w-8 shrink-0">
               <Image
                 src="/mizani_logo.png"
                 alt="Mizani"
                 fill
-                className="object-contain rounded-md"
+                className="object-contain"
                 priority
               />
             </div>
@@ -244,7 +247,7 @@ function Navbar({ session }: { session: Session | null }) {
             ))}
           </nav>
 
-          <div className="border-t border-border/60 px-4 py-5 space-y-2">
+          <div className="space-y-2 border-t border-border/60 px-4 py-5">
             {session ? (
               <SheetClose asChild>
                 <Button className="w-full" asChild>
@@ -313,7 +316,13 @@ const STATUS_COLOR: Record<string, string> = {
   "Out of Stock": "bg-red-500/10    text-red-700    dark:text-red-400",
 }
 
-function HeroSection({ session, onBookDemo }: { session: Session | null; onBookDemo: () => void }) {
+function HeroSection({
+  session,
+  onBookDemo,
+}: {
+  session: Session | null
+  onBookDemo: () => void
+}) {
   return (
     <section className="relative overflow-hidden bg-background pt-20 pb-28 md:pt-28 md:pb-36">
       <HeroBackground />
@@ -329,10 +338,9 @@ function HeroSection({ session, onBookDemo }: { session: Session | null; onBookD
           <motion.h1
             variants={fadeUp}
             custom={0.08}
-            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl leading-[1.1] font-bold tracking-tight text-foreground"
+            className="text-3xl leading-[1.1] font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl lg:text-6xl"
           >
-            Inventory tracking built{" "}
-            <br className="hidden sm:inline" />
+            Inventory tracking built <br className="hidden sm:inline" />
             <span className="font-normal text-muted-foreground">
               for the modern enterprise
             </span>
@@ -341,7 +349,7 @@ function HeroSection({ session, onBookDemo }: { session: Session | null; onBookD
           <motion.p
             variants={fadeUp}
             custom={0.16}
-            className="mx-auto mt-4 max-w-xl text-sm sm:text-base md:text-[1.05rem] leading-relaxed text-muted-foreground px-4 sm:px-0"
+            className="mx-auto mt-4 max-w-xl px-4 text-sm leading-relaxed text-muted-foreground sm:px-0 sm:text-base md:text-[1.05rem]"
           >
             Monitor stock levels, automate replenishment, and surface insights
             across your entire catalog — all in one place.
@@ -426,15 +434,21 @@ function HeroSection({ session, onBookDemo }: { session: Session | null; onBookD
                       key={row.name}
                       initial={{ opacity: 0, x: -8 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.4, delay: 0.55 + i * 0.07, ease }}
-                      className="border-border/40 transition-colors hover:bg-muted/30 whitespace-nowrap"
+                      transition={{
+                        duration: 0.4,
+                        delay: 0.55 + i * 0.07,
+                        ease,
+                      }}
+                      className="border-border/40 whitespace-nowrap transition-colors hover:bg-muted/30"
                     >
                       <TableCell className="py-3.5 pl-5">
                         <div className="flex items-center gap-3">
                           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-bold text-foreground/70">
                             {row.name.charAt(0)}
                           </div>
-                          <span className="text-sm font-medium">{row.name}</span>
+                          <span className="text-sm font-medium">
+                            {row.name}
+                          </span>
                         </div>
                       </TableCell>
                       <TableCell className="py-3.5">
@@ -558,14 +572,14 @@ function FeatureSection() {
         >
           {FEATURES.map((f, i) => (
             <motion.div key={f.title} variants={fadeUp} custom={i * 0.05}>
-              <Card className="group h-full border border-border/60 bg-card/80 transition-all duration-200 hover:bg-card hover:shadow-md relative overflow-hidden">
+              <Card className="group relative h-full overflow-hidden border border-border/60 bg-card/80 transition-all duration-200 hover:bg-card hover:shadow-md">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-lg border border-border/60 bg-muted transition-all duration-200 group-hover:border-primary/30 group-hover:bg-primary/5">
                       <f.icon className="h-4 w-4 text-muted-foreground transition-colors duration-200 group-hover:text-primary" />
                     </div>
                     {"comingSoon" in f && f.comingSoon && (
-                      <span className="mb-4 rounded-full bg-primary/10 border border-primary/20 px-2 py-0.5 text-[9px] font-bold tracking-wider text-primary uppercase">
+                      <span className="mb-4 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[9px] font-bold tracking-wider text-primary uppercase">
                         Coming Soon
                       </span>
                     )}
@@ -726,7 +740,7 @@ function ManageSection() {
                 ].map((row) => (
                   <TableRow
                     key={row.name}
-                    className="border-border/40 transition-colors hover:bg-muted/30 whitespace-nowrap"
+                    className="border-border/40 whitespace-nowrap transition-colors hover:bg-muted/30"
                   >
                     <TableCell className="py-3.5 pl-5 text-sm font-medium">
                       {row.name}
@@ -954,9 +968,14 @@ function Footer() {
       <div className="container mx-auto px-6 py-10">
         <div className="flex flex-col items-start justify-between gap-8 md:flex-row md:items-center">
           <div>
-            <div className="mb-2 flex items-center gap-2.5 text-sm font-semibold whitespace-nowrap shrink-0">
+            <div className="mb-2 flex shrink-0 items-center gap-2.5 text-sm font-semibold whitespace-nowrap">
               <div className="relative h-7 w-7 shrink-0">
-                <Image src="/mizani_logo.png" alt="Mizani" fill className="object-contain drop-shadow-sm" />
+                <Image
+                  src="/mizani_logo.png"
+                  alt="Mizani"
+                  fill
+                  className="object-contain drop-shadow-sm"
+                />
               </div>
               Mizani Systems
             </div>
@@ -986,7 +1005,13 @@ function Footer() {
                   {links.map((l) => (
                     <li key={l}>
                       <Link
-                        href={l === "Privacy" ? "/privacy" : l === "Terms" ? "/terms" : "#"}
+                        href={
+                          l === "Privacy"
+                            ? "/privacy"
+                            : l === "Terms"
+                              ? "/terms"
+                              : "#"
+                        }
                         className="text-xs text-muted-foreground transition-colors hover:text-foreground"
                       >
                         {l}
@@ -1025,53 +1050,58 @@ function Footer() {
 
 function PageLoader() {
   return (
+    <motion.div
+      key="page-loader"
+      initial={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.45, ease: "easeInOut" }}
+      className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background"
+    >
+      {/* Animated logo mark */}
       <motion.div
-        key="page-loader"
-        initial={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.45, ease: "easeInOut" }}
-        className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background"
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.45, ease }}
+        className="relative mb-6"
       >
-        {/* Animated logo mark */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.45, ease }}
-          className="relative mb-6"
-        >
-          {/* Soft glow ring */}
-          <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl scale-150" />
-          <div className="relative h-16 w-16">
-            <Image
-              src="/mizani_logo.png"
-              alt="Mizani"
-              fill
-              className="object-contain"
-              priority
-            />
-          </div>
-        </motion.div>
-
-        {/* Wordmark */}
-        <motion.p
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.15, ease }}
-          className="mb-6 text-base font-semibold tracking-tight text-foreground"
-        >
-          Mizani Systems
-        </motion.p>
-
-        {/* Animated progress bar */}
-        <div className="h-0.5 w-32 overflow-hidden rounded-full bg-primary/20">
-          <motion.div
-            initial={{ x: "-100%" }}
-            animate={{ x: "100%" }}
-            transition={{ duration: 0.9, delay: 0.1, repeat: Infinity, ease: "easeInOut" }}
-            className="h-full w-1/2 rounded-full bg-primary/80"
+        {/* Soft glow ring */}
+        <div className="absolute inset-0 scale-150 rounded-full bg-primary/20 blur-xl" />
+        <div className="relative h-16 w-16">
+          <Image
+            src="/mizani_logo.png"
+            alt="Mizani"
+            fill
+            className="object-contain"
+            priority
           />
         </div>
       </motion.div>
+
+      {/* Wordmark */}
+      <motion.p
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.15, ease }}
+        className="mb-6 text-base font-semibold tracking-tight text-foreground"
+      >
+        Mizani Systems
+      </motion.p>
+
+      {/* Animated progress bar */}
+      <div className="h-0.5 w-32 overflow-hidden rounded-full bg-primary/20">
+        <motion.div
+          initial={{ x: "-100%" }}
+          animate={{ x: "100%" }}
+          transition={{
+            duration: 0.9,
+            delay: 0.1,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="h-full w-1/2 rounded-full bg-primary/80"
+        />
+      </div>
+    </motion.div>
   )
 }
 
@@ -1082,12 +1112,10 @@ export default function LandingClient({
 }) {
   const [isDemoOpen, setIsDemoOpen] = useState(false)
   const [isContactOpen, setIsContactOpen] = useState(false)
-  // showLoader starts true; will be set false after minimum 500ms so the loader
-  // always plays for at least half a second even on fast connections
   const [showLoader, setShowLoader] = useState(true)
 
   useEffect(() => {
-    const t = setTimeout(() => setShowLoader(false), 500)
+    const t = setTimeout(() => setShowLoader(false), 50)
     return () => clearTimeout(t)
   }, [])
 
@@ -1108,7 +1136,10 @@ export default function LandingClient({
       >
         <Navbar session={session} />
         <main>
-          <HeroSection session={session} onBookDemo={() => setIsDemoOpen(true)} />
+          <HeroSection
+            session={session}
+            onBookDemo={() => setIsDemoOpen(true)}
+          />
           <FeatureSection />
           <ManageSection />
           <PricingSection onContactSales={() => setIsContactOpen(true)} />
@@ -1117,7 +1148,10 @@ export default function LandingClient({
       </div>
 
       <BookDemoModal isOpen={isDemoOpen} onClose={() => setIsDemoOpen(false)} />
-      <ContactSalesModal isOpen={isContactOpen} onClose={() => setIsContactOpen(false)} />
+      <ContactSalesModal
+        isOpen={isContactOpen}
+        onClose={() => setIsContactOpen(false)}
+      />
     </div>
   )
 }

@@ -169,7 +169,7 @@ export function DashboardHeader() {
       <SidebarTrigger className="-ml-1 shrink-0 transition-all duration-200 ease-linear peer-data-[state=expanded]:peer-data-[collapsible=icon]:fixed peer-data-[state=expanded]:peer-data-[collapsible=icon]:top-3 peer-data-[state=expanded]:peer-data-[collapsible=icon]:left-[calc(var(--sidebar-width)-2.5rem)] peer-data-[state=expanded]:peer-data-[collapsible=icon]:z-40" />
       <Separator
         orientation="vertical"
-        className="mr-0.5 h-4 sm:h-5 peer-data-[state=expanded]:peer-data-[collapsible=icon]:hidden"
+        className="mr-0.5 h-4 peer-data-[state=expanded]:peer-data-[collapsible=icon]:hidden sm:h-5"
       />
 
       <nav
@@ -194,7 +194,9 @@ export function DashboardHeader() {
               }`}
             >
               {/* Separator only shown on sm+ for non-last, always for last */}
-              <ChevronRight className={`h-3.5 w-3.5 shrink-0 text-muted-foreground/50 ${!isLast ? "hidden sm:block" : "hidden sm:block"}`} />
+              <ChevronRight
+                className={`h-3.5 w-3.5 shrink-0 text-muted-foreground/50 ${!isLast ? "hidden sm:block" : "hidden sm:block"}`}
+              />
               {isLast ? (
                 <span className="truncate font-medium text-foreground">
                   {item.label}
