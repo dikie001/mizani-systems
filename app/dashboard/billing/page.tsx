@@ -311,20 +311,16 @@ export default function BillingPage() {
     data: rawInvoices,
     isLoading: invoicesLoading,
     mutate: mutateInvoices,
-  } = useSWR<Invoice[]>(
-    workspaceId ? "/api/invoices/list" : null,
-    fetcher,
-    { revalidateOnFocus: false }
-  )
+  } = useSWR<Invoice[]>(workspaceId ? "/api/invoices/list" : null, fetcher, {
+    revalidateOnFocus: false,
+  })
   const {
     data: rawPayments,
     isLoading: paymentsLoading,
     mutate: mutatePayments,
-  } = useSWR<Payment[]>(
-    workspaceId ? "/api/payments/list" : null,
-    fetcher,
-    { revalidateOnFocus: false }
-  )
+  } = useSWR<Payment[]>(workspaceId ? "/api/payments/list" : null, fetcher, {
+    revalidateOnFocus: false,
+  })
 
   const invoices: Invoice[] = rawInvoices ?? []
   const payments: Payment[] = rawPayments ?? []
@@ -358,8 +354,10 @@ export default function BillingPage() {
       !subscription ||
       subscription.status === "cancelled" ||
       subscription.status === "expired"
-    const plans = PLANS.filter((p) => p.id === "basic" || p.id === "pro").filter(
-      (plan) => (isInactive || isTrial ? true : plan.id !== currentPlanName)
+    const plans = PLANS.filter(
+      (p) => p.id === "basic" || p.id === "pro"
+    ).filter((plan) =>
+      isInactive || isTrial ? true : plan.id !== currentPlanName
     )
     if (plans.length > 0) setExpandedPlanId(plans[0].id)
   }, [isUpgradeOpen, subscription])
@@ -387,7 +385,10 @@ export default function BillingPage() {
   }
 
   const handleUpgrade = async (planId: "basic" | "pro") => {
-    if (!workspaceId) { toast.error("Workspace not found"); return }
+    if (!workspaceId) {
+      toast.error("Workspace not found")
+      return
+    }
     setUpgradeLoadingPlanId(planId)
     try {
       const response = await fetch("/api/payments/initialize", {
@@ -396,7 +397,8 @@ export default function BillingPage() {
         body: JSON.stringify({ planId, workspaceId }),
       })
       const data = await response.json()
-      if (!response.ok) throw new Error(data.error ?? "Failed to initialize payment")
+      if (!response.ok)
+        throw new Error(data.error ?? "Failed to initialize payment")
       if (data.authorizationUrl) {
         setPendingPayment({
           authorizationUrl: data.authorizationUrl,
@@ -410,7 +412,9 @@ export default function BillingPage() {
       swrMutate("/api/subscriptions/current")
       setIsUpgradeOpen(false)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update plan")
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update plan"
+      )
     } finally {
       setUpgradeLoadingPlanId(null)
     }
@@ -456,7 +460,9 @@ export default function BillingPage() {
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Plan</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Plan
+                </p>
                 <div className="mt-1 flex items-center gap-2">
                   <span className="text-lg font-semibold">
                     {subscription.plan.displayName}
@@ -532,7 +538,9 @@ export default function BillingPage() {
           <CardContent className="flex items-center gap-3 pt-6">
             <AlertTriangle className="h-5 w-5 shrink-0 text-yellow-600" />
             <div>
-              <p className="font-medium text-yellow-700">No Active Subscription</p>
+              <p className="font-medium text-yellow-700">
+                No Active Subscription
+              </p>
               <p className="mt-0.5 text-sm text-yellow-700/70">
                 Choose a plan to access all features
               </p>
@@ -734,7 +742,7 @@ export default function BillingPage() {
                         {plan.description}
                       </p>
                     </CardHeader>
-                    <CardContent className="pb-4 pt-2">
+                    <CardContent className="pt-2 pb-4">
                       {isCollapsible ? (
                         <>
                           <button
@@ -798,9 +806,16 @@ export default function BillingPage() {
                           <Button
                             className="mt-4 w-full"
                             variant={
-                              isCurrent ? "outline" : (plan.variant as "default" | "outline" | "secondary")
+                              isCurrent
+                                ? "outline"
+                                : (plan.variant as
+                                    | "default"
+                                    | "outline"
+                                    | "secondary")
                             }
-                            disabled={isCurrent || upgradeLoadingPlanId !== null}
+                            disabled={
+                              isCurrent || upgradeLoadingPlanId !== null
+                            }
                             onClick={() =>
                               handleUpgrade(plan.id as "basic" | "pro")
                             }
