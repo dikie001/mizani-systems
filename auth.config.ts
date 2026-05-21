@@ -70,8 +70,17 @@ export const authConfig: NextAuthConfig = {
       return true
     },
     session({ session, token }) {
-      if (session.user && token.sub) {
-        session.user.id = token.sub
+      if (session.user) {
+        session.user.id = token.sub ?? session.user.id
+        session.user.role = typeof token.role === "string" ? token.role : "user"
+        session.user.status =
+          typeof token.status === "string" ? token.status : "active"
+        session.user.workspaceId =
+          typeof token.workspaceId === "string" ? token.workspaceId : undefined
+        session.user.workspaceName =
+          typeof token.workspaceName === "string"
+            ? token.workspaceName
+            : undefined
       }
       return session
     },

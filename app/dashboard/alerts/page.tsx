@@ -1,6 +1,7 @@
 "use client"
 
 import useSWR, { mutate } from "swr"
+import { useSession } from "next-auth/react"
 import {
   AlertCircle,
   AlertTriangle,
@@ -34,7 +35,8 @@ type AlertItem = {
   severity: "critical" | "warning" | string
 }
 
-const fetcher = async (url: string) => {
+const fetcher = async (key: string | [string, string]) => {
+  const url = Array.isArray(key) ? key[0] : key
   const response = await fetch(url)
   if (!response.ok) {
     throw new Error("Request failed")
@@ -111,12 +113,14 @@ function AlertCard({
 }
 
 export default function AlertsPage() {
+  const { data: session } = useSession()
+  const workspaceId = session?.user?.workspaceId
   const { data: activeAlerts, isLoading } = useSWR<AlertItem[]>(
-    "/api/alerts?status=active",
+    workspaceId ? ["/api/alerts?status=active", workspaceId] : null,
     fetcher
   )
   const { data: resolvedAlerts, isLoading: rLoading } = useSWR<AlertItem[]>(
-    "/api/alerts?status=resolved",
+    workspaceId ? ["/api/alerts?status=resolved", workspaceId] : null,
     fetcher
   )
 
@@ -233,9 +237,9 @@ export default function AlertsPage() {
                 <Card key={idx}>
                   <CardContent className="pt-4">
                     <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3 w-full">
-                        <Skeleton className="h-10 w-10 rounded-lg shrink-0 bg-muted/70" />
-                        <div className="space-y-1.5 flex-1">
+                      <div className="flex w-full items-start gap-3">
+                        <Skeleton className="h-10 w-10 shrink-0 rounded-lg bg-muted/70" />
+                        <div className="flex-1 space-y-1.5">
                           <Skeleton className="h-4 w-3/4 bg-muted/70" />
                           <Skeleton className="h-3 w-1/2 bg-muted/50" />
                         </div>

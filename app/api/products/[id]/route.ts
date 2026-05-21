@@ -17,15 +17,18 @@ type RouteContext = {
 
 export async function GET(_request: Request, context: RouteContext) {
   const session = await auth()
-  if (!session?.user?.id) {
+  if (!session?.user?.id || !session.user.workspaceId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
   const { id } = await context.params
 
   try {
-    const product = await prisma.product.findUnique({
-      where: { id },
+    const product = await prisma.product.findFirst({
+      where: {
+        id,
+        workspaceId: session.user.workspaceId,
+      },
       include: productQueryInclude(true),
     })
 
@@ -38,14 +41,14 @@ export async function GET(_request: Request, context: RouteContext) {
     console.error("Failed to fetch product:", error)
     return NextResponse.json(
       { error: "Failed to fetch product." },
-      { status: 500 },
+      { status: 500 }
     )
   }
 }
 
 export async function PUT(request: Request, context: RouteContext) {
   const session = await auth()
-  if (!session?.user?.id) {
+  if (!session?.user?.id || !session.user.workspaceId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
@@ -55,8 +58,11 @@ export async function PUT(request: Request, context: RouteContext) {
     const payload = normalizeProductPayload(await request.json())
 
     const product = await prisma.$transaction(async (tx) => {
-      const existingProduct = await tx.product.findUnique({
-        where: { id },
+      const existingProduct = await tx.product.findFirst({
+        where: {
+          id,
+          workspaceId: session.user.workspaceId,
+        },
       })
 
       if (!existingProduct) {
@@ -68,7 +74,7 @@ export async function PUT(request: Request, context: RouteContext) {
           workspaceId_sku: {
             workspaceId: existingProduct.workspaceId,
             sku: payload.sku,
-          }
+          },
         },
         select: { id: true },
       })
@@ -82,7 +88,7 @@ export async function PUT(request: Request, context: RouteContext) {
           workspaceId_name: {
             workspaceId: existingProduct.workspaceId,
             name: payload.category,
-          }
+          },
         },
         update: {},
         create: {
@@ -90,8 +96,6 @@ export async function PUT(request: Request, context: RouteContext) {
           workspaceId: existingProduct.workspaceId,
         },
       })
-
-
 
       const updatedProduct = await tx.product.update({
         where: { id },
@@ -166,14 +170,14 @@ export async function PUT(request: Request, context: RouteContext) {
             : message.includes("already exists")
               ? 409
               : 400,
-      },
+      }
     )
   }
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
   const session = await auth()
-  if (!session?.user?.id) {
+  if (!session?.user?.id || !session.user.workspaceId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
@@ -181,8 +185,11 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const product = await tx.product.findUnique({
-        where: { id },
+      const product = await tx.product.findFirst({
+        where: {
+          id,
+          workspaceId: session.user.workspaceId,
+        },
         include: {
           _count: {
             select: {
@@ -198,7 +205,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
       if (product._count.orderItems > 0) {
         throw new Error(
-          "This product is linked to existing orders and cannot be deleted.",
+          "This product is linked to existing orders and cannot be deleted."
         )
       }
 
@@ -249,7 +256,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
             : message.includes("cannot be deleted")
               ? 409
               : 400,
-      },
+      }
     )
   }
 }

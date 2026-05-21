@@ -2,6 +2,7 @@
 
 import { startTransition, useEffect, useState } from "react"
 import useSWR, { useSWRConfig } from "swr"
+import { useSession } from "next-auth/react"
 import { toast } from "sonner"
 import {
   Clock,
@@ -79,10 +80,14 @@ type OrderSummary = {
   date: string
 }
 
-const fetcher = async (url: string) => {
+const fetcher = async (key: string | [string, string]) => {
+  const url = Array.isArray(key) ? key[0] : key
   const res = await fetch(url)
   if (!res.ok) {
-    const errorMsg = await res.json().catch(() => ({})).then((data) => data.error || "An error occurred")
+    const errorMsg = await res
+      .json()
+      .catch(() => ({}))
+      .then((data) => data.error || "An error occurred")
     throw new Error(errorMsg)
   }
   return res.json()
@@ -132,9 +137,11 @@ const paymentConfig: Record<string, { style: string; label: string }> = {
 }
 
 export default function OrdersPage() {
+  const { data: session } = useSession()
+  const workspaceId = session?.user?.workspaceId
   const { mutate } = useSWRConfig()
   const { data: workspace } = useSWR<WorkspaceSummary>(
-    "/api/workspaces/current",
+    workspaceId ? ["/api/workspaces/current", workspaceId] : null,
     fetcher
   )
   const currency = workspace?.currency || "KES"
@@ -176,7 +183,7 @@ export default function OrdersPage() {
     data: orders,
     error,
     isLoading,
-  } = useSWR<OrderSummary[]>(url, fetcher)
+  } = useSWR<OrderSummary[]>(workspaceId ? [url, workspaceId] : null, fetcher)
 
   const totalRevenue =
     orders
@@ -383,13 +390,16 @@ export default function OrdersPage() {
           {isLoading ? (
             <div className="space-y-3">
               {[...Array(6)].map((_, idx) => (
-                <div key={idx} className="flex items-center justify-between border-b border-border/40 pb-3.5 pt-3.5 last:border-b-0 last:pb-0">
+                <div
+                  key={idx}
+                  className="flex items-center justify-between border-b border-border/40 pt-3.5 pb-3.5 last:border-b-0 last:pb-0"
+                >
                   <div className="flex items-center gap-3">
                     <Skeleton className="h-4 w-4 bg-muted/50" />
                     <Skeleton className="h-5 w-20 rounded bg-muted/60" />
                     <Skeleton className="h-4 w-28 bg-muted/70" />
                   </div>
-                  <div className="flex gap-4 items-center">
+                  <div className="flex items-center gap-4">
                     <Skeleton className="h-4 w-12 bg-muted/60" />
                     <Skeleton className="h-4 w-16 bg-muted/60" />
                     <Skeleton className="h-5 w-20 rounded bg-muted/60" />

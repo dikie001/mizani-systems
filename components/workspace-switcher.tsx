@@ -19,7 +19,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-  CommandSeparator
+  CommandSeparator,
 } from "@/components/ui/command"
 import {
   Popover,
@@ -81,15 +81,19 @@ export function WorkspaceSwitcher() {
     }
   }, [session?.user?.id, currentWorkspaceId, open, status])
 
-  if (status === "loading") {
+  // Show loader when session is loading OR when workspaces are loading and we don't have a workspace name
+  const showLoadingState =
+    status === "loading" || (isLoading && !session?.user?.workspaceName)
+
+  if (showLoadingState) {
     return (
       <div
         className={cn(
           "flex h-12 w-full items-center gap-2.5 rounded-lg border border-sidebar-border/50 bg-sidebar-accent/30 px-3 text-sidebar-foreground",
-          "group-data-[collapsible=icon]:h-9 group-data-[collapsible=icon]:w-9 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:justify-center"
+          "group-data-[collapsible=icon]:h-9 group-data-[collapsible=icon]:w-9 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0"
         )}
       >
-        <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
+        <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
         <span className="text-xs font-semibold text-muted-foreground group-data-[collapsible=icon]:hidden">
           Loading workspace...
         </span>

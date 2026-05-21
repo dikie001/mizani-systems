@@ -7,7 +7,7 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  if (!session) {
+  if (!session?.user?.id || !session.user.workspaceId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
@@ -19,14 +19,29 @@ export async function PATCH(
   }
 
   try {
+    // Verify the alert belongs to the user's workspace
+    const alert = await prisma.alert.findFirst({
+      where: {
+        id,
+        workspaceId: session.user.workspaceId,
+      },
+    })
+
+    if (!alert) {
+      return NextResponse.json({ error: "Alert not found" }, { status: 404 })
+    }
+
     const updated = await prisma.alert.update({
       where: { id },
-      data: { status }
+      data: { status },
     })
 
     return NextResponse.json(updated)
   } catch (error) {
     console.error("Failed to update alert:", error)
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    )
   }
 }

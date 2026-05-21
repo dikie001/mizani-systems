@@ -91,10 +91,14 @@ type CategoryStat = {
   value: number
 }
 
-const fetcher = async (url: string) => {
+const fetcher = async (key: string | [string, string]) => {
+  const url = Array.isArray(key) ? key[0] : key
   const res = await fetch(url)
   if (!res.ok) {
-    const errorMsg = await res.json().catch(() => ({})).then((data) => data.error || "An error occurred")
+    const errorMsg = await res
+      .json()
+      .catch(() => ({}))
+      .then((data) => data.error || "An error occurred")
     throw new Error(errorMsg)
   }
   return res.json()
@@ -112,8 +116,9 @@ const categoryChartConfig: ChartConfig = {
 
 export default function DashboardPage() {
   const { data: session } = useSession()
+  const workspaceId = session?.user?.workspaceId
   const { data: workspace } = useSWR<WorkspaceSummary>(
-    "/api/workspaces/current",
+    workspaceId ? ["/api/workspaces/current", workspaceId] : null,
     fetcher
   )
   const currency = workspace?.currency || "KES"
@@ -122,29 +127,37 @@ export default function DashboardPage() {
     "monthly"
   )
   const { data: stats, isLoading: statsLoading } = useSWR(
-    "/api/dashboard/stats",
+    workspaceId ? ["/api/dashboard/stats", workspaceId] : null,
     fetcher
   )
   const { data: revenueData, isLoading: revLoading } = useSWR(
-    `/api/dashboard/revenue?interval=${viewInterval}`,
+    workspaceId
+      ? [`/api/dashboard/revenue?interval=${viewInterval}`, workspaceId]
+      : null,
     fetcher
   )
   const { data: categoryData, isLoading: catLoading } = useSWR(
-    "/api/dashboard/categories",
+    workspaceId ? ["/api/dashboard/categories", workspaceId] : null,
     fetcher
   )
   const { data: activityData, isLoading: actLoading } = useSWR(
-    "/api/stock-movements",
+    workspaceId ? ["/api/stock-movements", workspaceId] : null,
     fetcher
   )
   const { data: lowStockData, isLoading: lowLoading } = useSWR(
-    "/api/products?status=low-stock",
+    workspaceId ? ["/api/products?status=low-stock", workspaceId] : null,
     fetcher
   )
 
-  const lowStockItems = Array.isArray(lowStockData) ? (lowStockData as LowStockItem[]) : []
-  const recentActivity = Array.isArray(activityData) ? (activityData as ActivityItem[]) : []
-  const categories = Array.isArray(categoryData) ? (categoryData as CategoryStat[]) : []
+  const lowStockItems = Array.isArray(lowStockData)
+    ? (lowStockData as LowStockItem[])
+    : []
+  const recentActivity = Array.isArray(activityData)
+    ? (activityData as ActivityItem[])
+    : []
+  const categories = Array.isArray(categoryData)
+    ? (categoryData as CategoryStat[])
+    : []
   const revenue = Array.isArray(revenueData) ? revenueData : []
 
   // Dynamic formatting for Revenue YAxis ticks without repeating currency prefix

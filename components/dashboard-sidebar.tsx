@@ -111,18 +111,28 @@ export function DashboardSidebar() {
     setOpenMobile(false)
   }
 
-  const { data: counts } = useSWR("/api/alerts/counts", (url) =>
-    fetch(url).then((res) => (res.ok ? res.json() : null))
+  const { data: counts } = useSWR(
+    workspaceId ? ["/api/alerts/counts", workspaceId] : null,
+    (key) => {
+      const url = Array.isArray(key) ? key[0] : key
+      return fetch(url).then((res) => (res.ok ? res.json() : null))
+    }
   )
 
   const { data: subscription, isLoading: isSubLoading } = useSWR(
-    workspaceId ? "/api/subscriptions/current" : null,
-    (url) => fetch(url).then((res) => (res.ok ? res.json() : null))
+    workspaceId ? ["/api/subscriptions/current", workspaceId] : null,
+    (key) => {
+      const url = Array.isArray(key) ? key[0] : key
+      return fetch(url).then((res) => (res.ok ? res.json() : null))
+    }
   )
+  // Show loading when session is loading, SWR is loading, subscription hasn't resolved yet,
+  // or when we're waiting for workspaceId to be available
   const isPlanLoading =
     sessionStatus === "loading" ||
     isSubLoading ||
-    (workspaceId && subscription === undefined)
+    (workspaceId && subscription === undefined) ||
+    (!workspaceId && sessionStatus !== "authenticated")
 
   const mainNav = mainNavItems.map((item) => {
     if (item.title === "Orders") {

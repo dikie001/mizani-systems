@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import useSWR from "swr"
+import { useSession } from "next-auth/react"
 import {
   ArrowRightLeft,
   Download,
@@ -47,10 +48,14 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
-const fetcher = async (url: string) => {
+const fetcher = async (key: string | [string, string]) => {
+  const url = Array.isArray(key) ? key[0] : key
   const res = await fetch(url)
   if (!res.ok) {
-    const errorMsg = await res.json().catch(() => ({})).then((data) => data.error || "An error occurred")
+    const errorMsg = await res
+      .json()
+      .catch(() => ({}))
+      .then((data) => data.error || "An error occurred")
     throw new Error(errorMsg)
   }
   return res.json()
@@ -95,6 +100,8 @@ type AuditLog = {
 }
 
 export default function AuditPage() {
+  const { data: session } = useSession()
+  const workspaceId = session?.user?.workspaceId
   const [searchQuery, setSearchQuery] = useState("")
   const [typeFilter, setTypeFilter] = useState("all")
 
@@ -102,7 +109,11 @@ export default function AuditPage() {
   if (searchQuery) url += `search=${encodeURIComponent(searchQuery)}&`
   if (typeFilter !== "all") url += `type=${encodeURIComponent(typeFilter)}&`
 
-  const { data: auditLogs, isLoading, error } = useSWR<AuditLog[]>(url, fetcher)
+  const {
+    data: auditLogs,
+    isLoading,
+    error,
+  } = useSWR<AuditLog[]>(workspaceId ? [url, workspaceId] : null, fetcher)
 
   return (
     <div className="space-y-6">
@@ -160,7 +171,10 @@ export default function AuditPage() {
           {isLoading ? (
             <div className="space-y-3.5 py-1">
               {[...Array(6)].map((_, idx) => (
-                <div key={idx} className="flex items-center justify-between border-b border-border/40 pb-3 pt-3 last:border-b-0 last:pb-0">
+                <div
+                  key={idx}
+                  className="flex items-center justify-between border-b border-border/40 pt-3 pb-3 last:border-b-0 last:pb-0"
+                >
                   <div className="flex items-center gap-3">
                     <Skeleton className="h-8 w-8 rounded bg-muted/70" />
                     <div className="space-y-1.5">
@@ -168,7 +182,7 @@ export default function AuditPage() {
                       <Skeleton className="h-3.5 w-44 bg-muted/50" />
                     </div>
                   </div>
-                  <div className="flex gap-4 items-center">
+                  <div className="flex items-center gap-4">
                     <Skeleton className="h-5 w-16 rounded-full bg-muted/60" />
                     <Skeleton className="h-4 w-28 bg-muted/50" />
                     <Skeleton className="h-4 w-24 bg-muted/50" />

@@ -12,6 +12,7 @@ import {
 } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import useSWR, { useSWRConfig } from "swr"
+import { useSession } from "next-auth/react"
 import { toast } from "sonner"
 import { formatPrice } from "@/lib/utils"
 import {
@@ -169,7 +170,8 @@ type StockAdjustmentValues = {
   quantity: string
 }
 
-const fetcher = async <T,>(url: string): Promise<T> => {
+const fetcher = async <T,>(key: string | [string, string]): Promise<T> => {
+  const url = Array.isArray(key) ? key[0] : key
   const response = await fetch(url)
   const payload = await response.json().catch(() => null)
 
@@ -289,7 +291,7 @@ function formatDate(value: string) {
 
 function InventoryPageSkeleton() {
   return (
-    <div className="space-y-6 animate-pulse">
+    <div className="animate-pulse space-y-6">
       {/* Header Skeleton */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-2">
@@ -309,7 +311,7 @@ function InventoryPageSkeleton() {
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <Skeleton className="h-10 w-10 rounded-lg bg-muted/70" />
-                <div className="space-y-2 flex-1">
+                <div className="flex-1 space-y-2">
                   <Skeleton className="h-4 w-3/4 bg-muted/60" />
                   <Skeleton className="h-6 w-12 bg-muted/80" />
                 </div>
@@ -336,7 +338,10 @@ function InventoryPageSkeleton() {
         <CardContent>
           <div className="space-y-3">
             {[...Array(6)].map((_, idx) => (
-              <div key={idx} className="flex items-center justify-between border-b pb-3.5 pt-3.5 last:border-0 last:pb-0">
+              <div
+                key={idx}
+                className="flex items-center justify-between border-b pt-3.5 pb-3.5 last:border-0 last:pb-0"
+              >
                 <div className="flex items-center gap-3">
                   <Skeleton className="h-8 w-8 rounded-lg bg-muted/70" />
                   <div className="space-y-1.5">
@@ -344,7 +349,7 @@ function InventoryPageSkeleton() {
                     <Skeleton className="h-3 w-20 bg-muted/50" />
                   </div>
                 </div>
-                <div className="flex gap-4 items-center">
+                <div className="flex items-center gap-4">
                   <Skeleton className="h-4 w-12 bg-muted/60" />
                   <Skeleton className="h-4 w-16 bg-muted/60" />
                   <Skeleton className="h-5 w-20 rounded bg-muted/60" />
@@ -368,6 +373,8 @@ export default function InventoryPage() {
 }
 
 function InventoryPageContent() {
+  const { data: session } = useSession()
+  const workspaceId = session?.user?.workspaceId
   const categoryListId = useId()
   const { mutate } = useSWRConfig()
 
@@ -656,13 +663,16 @@ function InventoryPageContent() {
     error,
     isLoading,
     mutate: mutateProducts,
-  } = useSWR<InventoryProduct[]>(productsUrl, fetcher)
+  } = useSWR<InventoryProduct[]>(
+    workspaceId ? [productsUrl, workspaceId] : null,
+    fetcher
+  )
   const { data: meta, mutate: mutateMeta } = useSWR<InventoryMeta>(
-    "/api/inventory/meta",
+    workspaceId ? ["/api/inventory/meta", workspaceId] : null,
     fetcher
   )
   const { data: workspace } = useSWR<WorkspaceSummary>(
-    "/api/workspaces/current",
+    workspaceId ? ["/api/workspaces/current", workspaceId] : null,
     fetcher
   )
   const currency = workspace?.currency || "KES"
@@ -672,7 +682,9 @@ function InventoryPageContent() {
     isLoading: loadingSelectedProduct,
     mutate: mutateSelectedProduct,
   } = useSWR<InventoryProduct>(
-    detailsProductId ? `/api/products/${detailsProductId}` : null,
+    workspaceId && detailsProductId
+      ? [`/api/products/${detailsProductId}`, workspaceId]
+      : null,
     fetcher
   )
 
@@ -1082,8 +1094,6 @@ function InventoryPageContent() {
         </div>
       </div>
 
-
-
       <div className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
         {[
           {
@@ -1198,7 +1208,10 @@ function InventoryPageContent() {
           {isLoading ? (
             <div className="space-y-3">
               {[...Array(6)].map((_, idx) => (
-                <div key={idx} className="flex items-center justify-between border-b border-border/40 pb-3.5 pt-3.5 last:border-b-0 last:pb-0">
+                <div
+                  key={idx}
+                  className="flex items-center justify-between border-b border-border/40 pt-3.5 pb-3.5 last:border-b-0 last:pb-0"
+                >
                   <div className="flex items-center gap-3">
                     <Skeleton className="h-8 w-8 rounded-lg bg-muted/70" />
                     <div className="space-y-1.5">
@@ -1206,7 +1219,7 @@ function InventoryPageContent() {
                       <Skeleton className="h-3 w-20 bg-muted/50" />
                     </div>
                   </div>
-                  <div className="flex gap-4 items-center">
+                  <div className="flex items-center gap-4">
                     <Skeleton className="h-4 w-12 bg-muted/60" />
                     <Skeleton className="h-4 w-16 bg-muted/60" />
                     <Skeleton className="h-5 w-20 rounded bg-muted/60" />
@@ -1463,15 +1476,16 @@ function InventoryPageContent() {
                   <button
                     type="button"
                     onClick={() => {
-                      const prefix = (formValues.category || "GEN")
-                        .replace(/[^a-zA-Z]/g, "")
-                        .slice(0, 3)
-                        .toUpperCase() || "GEN";
-                      const digits = Math.floor(1000 + Math.random() * 9000);
+                      const prefix =
+                        (formValues.category || "GEN")
+                          .replace(/[^a-zA-Z]/g, "")
+                          .slice(0, 3)
+                          .toUpperCase() || "GEN"
+                      const digits = Math.floor(1000 + Math.random() * 9000)
                       setFormValues((prev) => ({
                         ...prev,
                         sku: `${prefix}-${digits}`,
-                      }));
+                      }))
                     }}
                     className="text-[10px] font-semibold text-primary hover:underline"
                   >
