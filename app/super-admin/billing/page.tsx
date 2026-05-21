@@ -344,7 +344,7 @@ export default function SuperAdminBillingPage() {
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value: string | number | (string | number)[]) => [
+                      formatter={(value: any) => [
                         `${value} workspace${Number(value) !== 1 ? "s" : ""}`,
                       ]}
                       contentStyle={{

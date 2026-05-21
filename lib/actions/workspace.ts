@@ -237,31 +237,56 @@ export async function createWorkspace(data: {
         },
       })
 
-      // Only create a subscription immediately for free/trial plans.
-      // Paid plans must go through Paystack — the subscription is created
-      // by the payment verify route once payment is confirmed.
-      if (dbPlan && staticPlan?.monthlyPrice === 0) {
-        const subscription = await tx.subscription.create({
-          data: {
-            workspaceId: newWorkspace.id,
-            planId: dbPlan.id,
-            status: "trial",
-            paymentStatus: "paid",
-            currentBillingCycleStart: new Date(),
-            currentBillingCycleEnd: new Date(
-              Date.now() + 14 * 24 * 60 * 60 * 1000
-            ), // 14-day free trial
+      // Check if user already has an existing workspace with a subscription
+      const existingWorkspaceWithSub = await tx.workspace.findFirst({
+        where: {
+          members: {
+            some: {
+              userId: userId,
+              role: "OWNER",
+            },
           },
-        })
+          subscriptionId: { not: null },
+        },
+        include: {
+          subscription: true,
+        },
+      })
 
+      // If user has an existing subscription, link the new workspace to it
+      // This ensures all workspaces under one admin share the same billing
+      if (existingWorkspaceWithSub?.subscriptionId) {
         await tx.workspace.update({
           where: { id: newWorkspace.id },
-          data: { subscriptionId: subscription.id },
+          data: { subscriptionId: existingWorkspaceWithSub.subscriptionId },
         })
+      } else {
+        // Only create a subscription for the first workspace (trial/free plans)
+        // Paid plans must go through Paystack — the subscription is created
+        // by the payment verify route once payment is confirmed.
+        if (dbPlan && staticPlan?.monthlyPrice === 0) {
+          const subscription = await tx.subscription.create({
+            data: {
+              workspaceId: newWorkspace.id,
+              planId: dbPlan.id,
+              status: "trial",
+              paymentStatus: "paid",
+              currentBillingCycleStart: new Date(),
+              currentBillingCycleEnd: new Date(
+                Date.now() + 14 * 24 * 60 * 60 * 1000
+              ), // 14-day free trial
+            },
+          })
+
+          await tx.workspace.update({
+            where: { id: newWorkspace.id },
+            data: { subscriptionId: subscription.id },
+          })
+        }
+        // For paid plans: workspace is created with selectedPlanId set,
+        // but no subscription record yet. OnboardingClient will call
+        // /api/payments/initialize next to redirect to Paystack.
       }
-      // For paid plans: workspace is created with selectedPlanId set,
-      // but no subscription record yet. OnboardingClient will call
-      // /api/payments/initialize next to redirect to Paystack.
 
       // Update the user's current workspace
       await tx.user.update({
