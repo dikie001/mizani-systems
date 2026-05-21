@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { ImageWithSpinner } from "@/components/image-with-spinner"
 import type { Session } from "next-auth"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import {
   ArrowRight,
   Check,
@@ -12,13 +13,18 @@ import {
   Layers,
   Smartphone,
   Shield,
-  Database,
   TrendingUp,
   Users,
-  Package,
   Menu,
   X,
 } from "lucide-react"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetClose,
+} from "@/components/ui/sheet"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -40,12 +46,11 @@ import { BookDemoModal, ContactSalesModal } from "@/components/landing/lead-moda
 const ease = [0.25, 0.46, 0.45, 0.94] as const
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 20, filter: "blur(6px)" },
+  hidden: { opacity: 0, y: 18 },
   visible: (delay: number = 0) => ({
     opacity: 1,
     y: 0,
-    filter: "blur(0px)",
-    transition: { duration: 0.65, delay, ease },
+    transition: { duration: 0.55, delay, ease },
   }),
 }
 
@@ -128,41 +133,49 @@ function HeroBackground() {
 function Navbar({ session }: { session: Session | null }) {
   const [isOpen, setIsOpen] = useState(false)
 
+  const navLinks = ["Features", "Pricing", "About"]
+
   return (
-    <motion.header
-      initial={{ opacity: 0, y: -12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease }}
-      className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/80 backdrop-blur-xl"
-    >
-      <div className="container mx-auto flex h-14 items-center justify-between px-6">
-        <Link
-          href="/"
-          className="flex items-center gap-2.5 text-[15px] font-semibold tracking-tight whitespace-nowrap shrink-0"
-        >
-          <ImageWithSpinner
-            src="/mizani_logo.png"
-            alt="Mizani Systems"
-            width={32}
-            height={32}
-            className="h-8 w-8 rounded-lg border border-border shadow-sm"
-          />
-          <span>Mizani Systems</span>
-        </Link>
+    <>
+      <motion.header
+        initial={{ opacity: 0, y: -12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease }}
+        className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/80 backdrop-blur-xl"
+      >
+        <div className="container mx-auto flex h-14 items-center justify-between px-4 sm:px-6">
+          {/* Logo */}
+          <Link
+            href="/"
+            className="flex items-center gap-2.5 text-[15px] font-semibold tracking-tight whitespace-nowrap shrink-0"
+          >
+            <div className="relative h-8 w-8 shrink-0">
+              <Image
+                src="/mizani_logo.png"
+                alt="Mizani"
+                fill
+                className="object-contain rounded-md"
+                priority
+              />
+            </div>
+            <span className="hidden sm:inline">Mizani Systems</span>
+            <span className="sm:hidden">Mizani</span>
+          </Link>
 
-        <nav className="hidden items-center gap-7 text-sm text-muted-foreground md:flex">
-          {["Features", "Pricing", "About"].map((item) => (
-            <Link
-              key={item}
-              href={`#${item.toLowerCase()}`}
-              className="transition-colors duration-150 hover:text-foreground"
-            >
-              {item}
-            </Link>
-          ))}
-        </nav>
+          {/* Desktop nav */}
+          <nav className="hidden items-center gap-7 text-sm text-muted-foreground md:flex">
+            {navLinks.map((item) => (
+              <Link
+                key={item}
+                href={`#${item.toLowerCase()}`}
+                className="transition-colors duration-150 hover:text-foreground"
+              >
+                {item}
+              </Link>
+            ))}
+          </nav>
 
-        <div className="flex items-center gap-3">
+          {/* Desktop CTA */}
           <div className="hidden items-center gap-3 md:flex">
             {session ? (
               <Button size="sm" asChild>
@@ -172,11 +185,7 @@ function Navbar({ session }: { session: Session | null }) {
               </Button>
             ) : (
               <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  asChild
-                >
+                <Button variant="ghost" size="sm" asChild>
                   <Link href="/auth">Sign in</Link>
                 </Button>
                 <Button size="sm" asChild>
@@ -186,60 +195,82 @@ function Navbar({ session }: { session: Session | null }) {
             )}
           </div>
 
+          {/* Mobile hamburger */}
           <Button
             variant="ghost"
             size="icon"
             className="h-9 w-9 rounded-lg md:hidden"
-            onClick={() => setIsOpen(!isOpen)}
+            onClick={() => setIsOpen(true)}
+            aria-label="Open menu"
           >
-            {isOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            <Menu className="h-5 w-5" />
           </Button>
         </div>
-      </div>
+      </motion.header>
 
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          className="border-t border-border/50 bg-background/95 backdrop-blur-lg md:hidden"
-        >
-          <div className="flex flex-col gap-4 px-6 py-6">
-            {["Features", "Pricing", "About"].map((item) => (
+      {/* Mobile drawer */}
+      <Sheet open={isOpen} onOpenChange={setIsOpen}>
+        <SheetContent side="right" className="flex w-72 flex-col p-0">
+          <SheetHeader className="border-b border-border/60 px-5 py-4">
+            <SheetTitle asChild>
               <Link
-                key={item}
-                href={`#${item.toLowerCase()}`}
+                href="/"
                 onClick={() => setIsOpen(false)}
-                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                className="flex items-center gap-2.5 text-[15px] font-semibold tracking-tight"
               >
-                {item}
+                <div className="relative h-7 w-7 shrink-0">
+                  <Image
+                    src="/mizani_logo.png"
+                    alt="Mizani"
+                    fill
+                    className="object-contain"
+                  />
+                </div>
+                Mizani Systems
               </Link>
-            ))}
-            <div className="my-1 border-t border-border/40" />
-            {session ? (
-              <Button size="sm" className="w-full justify-center" asChild>
-                <Link href="/dashboard" onClick={() => setIsOpen(false)}>
-                  Dashboard <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-                </Link>
-              </Button>
-            ) : (
-              <div className="flex flex-col gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-center"
-                  asChild
+            </SheetTitle>
+          </SheetHeader>
+
+          <nav className="flex flex-1 flex-col gap-1 px-3 py-4">
+            {navLinks.map((item) => (
+              <SheetClose key={item} asChild>
+                <Link
+                  href={`#${item.toLowerCase()}`}
+                  className="flex h-11 items-center rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
-                  <Link href="/auth" onClick={() => setIsOpen(false)}>Sign in</Link>
+                  {item}
+                </Link>
+              </SheetClose>
+            ))}
+          </nav>
+
+          <div className="border-t border-border/60 px-4 py-5 space-y-2">
+            {session ? (
+              <SheetClose asChild>
+                <Button className="w-full" asChild>
+                  <Link href="/dashboard">
+                    Dashboard <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                  </Link>
                 </Button>
-                <Button size="sm" className="w-full justify-center" asChild>
-                  <Link href="/auth" onClick={() => setIsOpen(false)}>Get started</Link>
-                </Button>
-              </div>
+              </SheetClose>
+            ) : (
+              <>
+                <SheetClose asChild>
+                  <Button variant="outline" className="w-full" asChild>
+                    <Link href="/auth">Sign in</Link>
+                  </Button>
+                </SheetClose>
+                <SheetClose asChild>
+                  <Button className="w-full" asChild>
+                    <Link href="/auth">Get started</Link>
+                  </Button>
+                </SheetClose>
+              </>
             )}
           </div>
-        </motion.div>
-      )}
-    </motion.header>
+        </SheetContent>
+      </Sheet>
+    </>
   )
 }
 
@@ -924,13 +955,9 @@ function Footer() {
         <div className="flex flex-col items-start justify-between gap-8 md:flex-row md:items-center">
           <div>
             <div className="mb-2 flex items-center gap-2.5 text-sm font-semibold whitespace-nowrap shrink-0">
-              <ImageWithSpinner
-                src="/mizani_logo.png"
-                alt="Mizani Systems"
-                width={28}
-                height={28}
-                className="h-7 w-7 rounded-lg border border-border shadow-sm"
-              />
+              <div className="relative h-7 w-7 shrink-0">
+                <Image src="/mizani_logo.png" alt="Mizani" fill className="object-contain drop-shadow-sm" />
+              </div>
               Mizani Systems
             </div>
             <p className="max-w-xs text-xs leading-relaxed text-muted-foreground">
@@ -994,6 +1021,60 @@ function Footer() {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+// ─── Branded page loader ─────────────────────────────────────────────────────
+
+function PageLoader() {
+  return (
+      <motion.div
+        key="page-loader"
+        initial={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.45, ease: "easeInOut" }}
+        className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background"
+      >
+        {/* Animated logo mark */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.45, ease }}
+          className="relative mb-6"
+        >
+          {/* Soft glow ring */}
+          <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl scale-150" />
+          <div className="relative h-16 w-16">
+            <Image
+              src="/mizani_logo.png"
+              alt="Mizani"
+              fill
+              className="object-contain"
+              priority
+            />
+          </div>
+        </motion.div>
+
+        {/* Wordmark */}
+        <motion.p
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.15, ease }}
+          className="mb-6 text-base font-semibold tracking-tight text-foreground"
+        >
+          Mizani Systems
+        </motion.p>
+
+        {/* Animated progress bar */}
+        <div className="h-0.5 w-32 overflow-hidden rounded-full bg-primary/20">
+          <motion.div
+            initial={{ x: "-100%" }}
+            animate={{ x: "100%" }}
+            transition={{ duration: 0.9, delay: 0.1, repeat: Infinity, ease: "easeInOut" }}
+            className="h-full w-1/2 rounded-full bg-primary/80"
+          />
+        </div>
+      </motion.div>
+  )
+}
+
 export default function LandingClient({
   session,
 }: {
@@ -1001,17 +1082,39 @@ export default function LandingClient({
 }) {
   const [isDemoOpen, setIsDemoOpen] = useState(false)
   const [isContactOpen, setIsContactOpen] = useState(false)
+  // showLoader starts true; will be set false after minimum 500ms so the loader
+  // always plays for at least half a second even on fast connections
+  const [showLoader, setShowLoader] = useState(true)
+
+  useEffect(() => {
+    const t = setTimeout(() => setShowLoader(false), 500)
+    return () => clearTimeout(t)
+  }, [])
 
   return (
     <div className="min-h-screen bg-background text-foreground antialiased selection:bg-primary/15">
-      <Navbar session={session} />
-      <main>
-        <HeroSection session={session} onBookDemo={() => setIsDemoOpen(true)} />
-        <FeatureSection />
-        <ManageSection />
-        <PricingSection onContactSales={() => setIsContactOpen(true)} />
-      </main>
-      <Footer />
+      {/* AnimatePresence here so exit animation on PageLoader actually runs */}
+      <AnimatePresence>
+        {showLoader && <PageLoader key="page-loader" />}
+      </AnimatePresence>
+
+      <div
+        style={{
+          opacity: showLoader ? 0 : 1,
+          transition: "opacity 0.45s ease",
+          // keep it out of the accessibility tree while hidden
+          visibility: showLoader ? "hidden" : "visible",
+        }}
+      >
+        <Navbar session={session} />
+        <main>
+          <HeroSection session={session} onBookDemo={() => setIsDemoOpen(true)} />
+          <FeatureSection />
+          <ManageSection />
+          <PricingSection onContactSales={() => setIsContactOpen(true)} />
+        </main>
+        <Footer />
+      </div>
 
       <BookDemoModal isOpen={isDemoOpen} onClose={() => setIsDemoOpen(false)} />
       <ContactSalesModal isOpen={isContactOpen} onClose={() => setIsContactOpen(false)} />

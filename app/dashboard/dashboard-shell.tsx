@@ -35,7 +35,7 @@ export function DashboardShell({
       <DashboardSidebar />
       <SidebarInset className="h-svh overflow-hidden">
         <DashboardHeader />
-        <main className="flex-1 overflow-auto p-4 md:p-6">{children}</main>
+        <main className="flex-1 overflow-auto p-3 sm:p-4 md:p-6">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   )
