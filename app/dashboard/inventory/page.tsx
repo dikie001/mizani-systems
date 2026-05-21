@@ -630,9 +630,6 @@ function InventoryPageContent() {
   }
 
   const [exporting, setExporting] = useState(false)
-  const [importOpen, setImportOpen] = useState(false)
-  const [importing, setImporting] = useState(false)
-  const [importFile, setImportFile] = useState<File | null>(null)
 
   const beginCreate = useCallback(() => {
     setFormMode("create")
@@ -647,10 +644,10 @@ function InventoryPageContent() {
       if (action === "add") {
         beginCreate()
       } else if (action === "import") {
-        setImportOpen(true)
+        router.push("/dashboard/inventory/import")
       }
     })
-  }, [action, beginCreate])
+  }, [action, beginCreate, router])
 
   const productsUrl = buildProductsUrl({
     searchQuery,
@@ -1026,36 +1023,6 @@ function InventoryPageContent() {
     }
   }
 
-  const handleImportSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    if (!importFile) return
-
-    setImporting(true)
-
-    try {
-      const content = await importFile.text()
-      const format = importFile.name.endsWith(".json") ? "json" : "csv"
-
-      const response = await fetch("/api/products/import", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ content, format }),
-      })
-
-      const payload = await response.json()
-      if (!response.ok) throw new Error(payload.error || "Import failed.")
-
-      setImportOpen(false)
-      setImportFile(null)
-      toast.success(payload.message)
-      await refreshInventory()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Import failed.")
-    } finally {
-      setImporting(false)
-    }
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -1082,10 +1049,10 @@ function InventoryPageContent() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setImportOpen(true)}
+            onClick={() => router.push("/dashboard/inventory/import")}
           >
             <Upload className="mr-1.5 h-3.5 w-3.5" />
-            Import
+            Bulk Import
           </Button>
           <Button size="sm" onClick={beginCreate}>
             <Plus className="mr-1.5 h-3.5 w-3.5" />
@@ -2487,57 +2454,6 @@ function InventoryPageContent() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={importOpen} onOpenChange={setImportOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold">
-              Bulk Import Products
-            </DialogTitle>
-            <DialogDescription>
-              Upload a CSV or JSON file to bulk create or update your inventory
-              catalog.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleImportSubmit} className="space-y-6 pt-4">
-            <div className="grid gap-2">
-              <Label
-                htmlFor="import-file"
-                className="text-xs font-bold tracking-wider text-muted-foreground uppercase"
-              >
-                Inventory File (CSV or JSON)
-              </Label>
-              <Input
-                id="import-file"
-                type="file"
-                accept=".csv,.json"
-                onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-                className="h-12 cursor-pointer border-2 border-dashed bg-muted/20 pt-2.5 transition-all hover:bg-muted/30"
-                required
-              />
-              <p className="text-[10px] text-muted-foreground italic">
-                Tip: SKUs are used to match existing products for updates.
-              </p>
-            </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setImportOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={importing || !importFile}>
-                {importing ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Upload className="mr-2 h-4 w-4" />
-                )}
-                Start Import
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

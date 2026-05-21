@@ -126,13 +126,16 @@ export function DashboardSidebar() {
       return fetch(url).then((res) => (res.ok ? res.json() : null))
     }
   )
-  // Show loading when session is loading, SWR is loading, subscription hasn't resolved yet,
-  // or when we're waiting for workspaceId to be available
+  // Show loading when:
+  // 1. Session is loading
+  // 2. Session is authenticated but workspaceId is not yet available
+  // 3. SWR is actively loading
+  // 4. We have workspaceId but subscription data hasn't been fetched yet
   const isPlanLoading =
     sessionStatus === "loading" ||
+    (sessionStatus === "authenticated" && !workspaceId) ||
     isSubLoading ||
-    (workspaceId && subscription === undefined) ||
-    (!workspaceId && sessionStatus !== "authenticated")
+    (workspaceId && subscription === undefined)
 
   const mainNav = mainNavItems.map((item) => {
     if (item.title === "Orders") {
